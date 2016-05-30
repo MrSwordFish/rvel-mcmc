@@ -17,7 +17,7 @@ def AutoCorrelation(x):
 
 true_state = state.State(planets=[{"m":1e-3, "a":0.225, "h":0.2, "k":0., "l":np.pi/2.}, {"m":2e-3, "a":0.365, "h":0.14, "k":0., "l":np.pi/2.}])
 #obs = observations.FakeObservation(true_state, Npoints=100, error=1e-4, tmax=15.)
-obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100, tmax=15.)
+obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(10,5))
 ax = plt.subplot(111)
 ax.plot(*true_state.get_rv_plotting(obs))

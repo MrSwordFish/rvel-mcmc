@@ -47,7 +47,7 @@ class FakeObservation(Observation):
         self.rv = np.concatenate((self.rvb, self.rvf), axis=0)
 
 class Observation_FromFile(Observation):
-    def __init__(self, filename='yourfile.txt', Npoints=30, tmax=1.5):
+    def __init__(self, filename='yourfile.txt', Npoints=30):
         """
             Load observations from a .vels file. 
         """
