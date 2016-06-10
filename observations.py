@@ -28,11 +28,11 @@ class FakeObservation(Observation):
         sim.move_to_com()
         
         self.tf = np.sort(np.random.uniform(0.,tmax/2.,self.Npoints/2.))
-        self.tb = np.sort(np.random.uniform(-tmax/2.,0.,self.Npoints/2.))
-        self.rvf = np.zeros(Npoints/2.)
-        self.rvb = np.zeros(Npoints/2.)
-        self.errorf = np.zeros(Npoints/2.)
-        self.errorb = np.zeros(Npoints/2.)
+        self.tb = np.sort(np.random.uniform(0.,-tmax/2.,self.Npoints/2.))
+        self.rvf = np.zeros(self.Npoints/2.)
+        self.rvb = np.zeros(self.Npoints/2.)
+        self.errorf = np.zeros(self.Npoints/2.)
+        self.errorb = np.zeros(self.Npoints/2.)
         for i, tf in enumerate(self.tf):
             sim.integrate(tf)
             self.errorf[i] = error

@@ -5,6 +5,7 @@ import state
 import mcmc
 import numpy as np
 import corner
+from datetime import datetime
 
 def AutoCorrelation(x):
     x = np.asarray(x)
@@ -14,16 +15,24 @@ def AutoCorrelation(x):
     result /= result[0]
     return result 
 
-true_state = state.State(planets=[{"m":2e-3, "a":1.3, "h":0.35, "k":0.1, "l":0.}])
-obs = observations.FakeObservation(true_state, Npoints=100, error=1e-4, tmax=15.)
+print ("Starting, time: {t}".format(t=datetime.utcnow()))
+true_state = state.State(planets=[{"m":1e-3, "a":0.225, "h":0.21, "k":0.02, "l":0.3}, {"m":2e-3, "a":0.365, "h":0.15, "k":0.03, "l":2.2}])
+#true_state = state.State(planets=[{"m":1e-3, "a":1.225, "h":0.7, "k":0., "l":0.0},{"m":2e-3, "a":2.365, "h":0.14, "k":0., "l":0.0}])
+#obs = observations.FakeObservation(true_state, Npoints=200, error=2e-4, tmax=46.)
+obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(10,5))
 ax = plt.subplot(111)
-ax.plot(*true_state.get_rv_plotting(obs))
-ax.plot(obs.t, obs.rv, ".")
-
+ax.plot(*true_state.get_rv_plotting(obs), color="blue")
+ax.plot(obs.t, obs.rv, ".r")
+ax.set_xticklabels([])
+plt.grid()
+frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])        
+plt.plot(obs.t,obs.rv-true_state.get_rv(obs.t),'or')
+plt.grid()
+plt.savefig('smala_RV_Start.png', bbox_inches='tight')
 
 smala = mcmc.Smala(true_state,obs)
-Niter = 45
+Niter = 200
 chain = np.zeros((Niter,smala.state.Nvars))
 chainlogp = np.zeros(Niter)
 tries = 0
@@ -31,8 +40,9 @@ for i in range(Niter):
     tries += smala.step_force()
     chain[i] = smala.state.get_params()
     chainlogp[i] = smala.state.logp
+    if(i % 5 == 1):
+        print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
 print("Acceptance rate: %.2f%%"%(float(Niter)/tries*100))
-
 
 
 fig = plt.figure(figsize=(10,5))
@@ -43,15 +53,28 @@ for i in range(smala.state.Nvars):
 ax = plt.subplot(smala.state.Nvars+1,1,smala.state.Nvars+1)
 ax.set_ylabel("$\log(p)$")
 ax.plot(chainlogp)    
+plt.savefig('smala_Chains.png', bbox_inches='tight')
 
-fig = plt.figure(figsize=(10,5))
+fig = plt.figure(figsize=(13,5))
 ax = plt.subplot(111)
 for c in np.random.choice(Niter,100):
     s = smala.state.deepcopy()
     s.set_params(chain[c])
     ax.plot(*s.get_rv_plotting(obs), alpha=0.1, color="gray")
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
-ax.plot(obs.t, obs.rv, "r.")    
+ax.plot(obs.t, obs.rv, ".r")
+ax.set_xticklabels([])
+plt.grid()
+ax2=fig.add_axes([0.125, -0.63, 0.775, 0.7]) 
+plt.plot(*smala.state.get_rv_plotting(obs), alpha=0.8,color="black")
+ax2.plot(obs.t, obs.rv, ".r")
+ax2.set_xticklabels([])
+plt.grid()
+ax3=fig.add_axes([0.125, -0.9, 0.775, 0.23])        
+plt.plot(obs.t,obs.rv-smala.state.get_rv(obs.t),'or')
+plt.grid()
+
+plt.savefig('smala_RV_trails.png', bbox_inches='tight')
 
 figure = corner.corner(chain, labels=s.get_keys(), plot_contours=False, truths=true_state.get_params(),label_kwargs={"fontsize":20})
 
@@ -66,7 +89,4 @@ for i in range(s.Nvars):
 		if(r[i] <0.5):
 			print "AC time {t}".format(t=i)
 			break
-
-
-
-plt.show()
+plt.savefig('smala_AC_times.png', bbox_inches='tight')

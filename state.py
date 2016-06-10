@@ -149,29 +149,30 @@ class State(object):
         chi2f = 0.
         chi2_df = np.zeros(self.Nvars)
         chi2_ddf = np.zeros((self.Nvars,self.Nvars))
+        fac = obs.Npoints
         for i, tf in enumerate(obs.tf):
             sim.integrate(tf)
-            chi2f += (sim.particles[0].vx-obs.rvf[i])**2*1./(obs.errorf[i]**2 * obs.Npoints)
+            chi2f += (sim.particles[0].vx-obs.rvf[i])**2*1./(obs.errorf[i]**2 *fac)
             v2index = 0
             for vindex1 in range(self.Nvars):
-                chi2_df[vindex1] += 2. * variations1[vindex1].particles[0].vx * (sim.particles[0].vx-obs.rvf[i])*1./(obs.errorf[i]**2 * obs.Npoints)
+                chi2_df[vindex1] += 2. * variations1[vindex1].particles[0].vx * (sim.particles[0].vx-obs.rvf[i])*1./(obs.errorf[i]**2 *fac)
             
                 for vindex2 in range(self.Nvars):
                     if vindex1 >= vindex2:
-                        chi2_ddf[vindex1][vindex2] +=  2. * variations2[v2index].particles[0].vx * (sim.particles[0].vx-obs.rvf[i])*1./(obs.errorf[i]**2 * obs.Npoints) + 2. * variations1[vindex1].particles[0].vx * variations1[vindex2].particles[0].vx*1./(obs.errorf[i]**2 * obs.Npoints)
+                        chi2_ddf[vindex1][vindex2] +=  2. * variations2[v2index].particles[0].vx * (sim.particles[0].vx-obs.rvf[i])*1./(obs.errorf[i]**2 * fac) + 2. * variations1[vindex1].particles[0].vx * variations1[vindex2].particles[0].vx*1./(obs.errorf[i]**2 * fac)
                         v2index += 1
                         chi2_ddf[vindex2][vindex1] = chi2_ddf[vindex1][vindex2]
 
         for i, tb in enumerate(obs.tb):
             sim.integrate(tb)
-            chi2b += (sim.particles[0].vx-obs.rvb[i])**2*1./(obs.errorb[0]**2 * obs.Npoints)
+            chi2b += (sim.particles[0].vx-obs.rvb[i])**2*1./(obs.errorb[0]**2 * fac)
             v2index = 0
             for vindex1 in range(self.Nvars):
-                chi2_db[vindex1] += 2. * variations1[vindex1].particles[0].vx * (sim.particles[0].vx-obs.rvb[i])*1./(obs.errorb[i]**2 * obs.Npoints)
+                chi2_db[vindex1] += 2. * variations1[vindex1].particles[0].vx * (sim.particles[0].vx-obs.rvb[i])*1./(obs.errorb[i]**2 * fac)
             
                 for vindex2 in range(self.Nvars):
                     if vindex1 >= vindex2:
-                        chi2_ddb[vindex1][vindex2] +=  2. * variations2[v2index].particles[0].vx * (sim.particles[0].vx-obs.rvb[i])*1./(obs.errorb[i]**2 * obs.Npoints) + 2. * variations1[vindex1].particles[0].vx * variations1[vindex2].particles[0].vx*1./(obs.errorb[i]**2 * obs.Npoints)
+                        chi2_ddb[vindex1][vindex2] +=  2. * variations2[v2index].particles[0].vx * (sim.particles[0].vx-obs.rvb[i])*1./(obs.errorb[i]**2 * fac) + 2. * variations1[vindex1].particles[0].vx * variations1[vindex2].particles[0].vx*1./(obs.errorb[i]**2 * fac)
                         v2index += 1
                         chi2_ddb[vindex2][vindex1] = chi2_ddb[vindex1][vindex2]
 
@@ -185,7 +186,7 @@ class State(object):
 
     def priorHard(self):
         for i, planet in enumerate(self.planets):
-            if (self.planets[i]["a"] <=0.01) :
+            if (self.planets[i]["a"] <=0.05) :
                 print "Invalid state was proposed (a)"
                 return True
             if (self.planets[i]["m"] <=5e-6) :

@@ -52,7 +52,7 @@ class Ensemble(Mcmc):
 class Mh(Mcmc):
     def __init__(self, initial_state, obs):
         super(Mh,self).__init__(initial_state, obs)
-        self.step_size = 2e-5
+        self.step_size = 3e-5
 
     def generate_proposal(self):
         prop = self.state.deepcopy()
@@ -108,12 +108,17 @@ class Smala(Mcmc):
         return stats.multivariate_normal.logpdf(state_to.get_params(),mean=mu, cov=(self.epsilon)**2*Ginv)
         
     def step(self):
-        stateStar = self.generate_proposal()
-        if (stateStar.priorHard()):
-        	return False
-        q_ts_t = self.transitionProbability(self.state, stateStar)
-        q_t_ts = self.transitionProbability(stateStar, self.state)
-
+        while True:
+            errorCounter = 0
+            try: 
+                stateStar = self.generate_proposal()
+                if (stateStar.priorHard()):
+                	return False
+                q_ts_t = self.transitionProbability(self.state, stateStar)
+                q_t_ts = self.transitionProbability(stateStar, self.state)
+            except np.linalg.linalg.LinAlgError as err:
+                errorCounter
+                print "Alert: {c} LinAlgError have occured in a row.".format(c=errorCounter)
         if np.exp(stateStar.logp-self.state.logp+q_t_ts-q_ts_t) > np.random.uniform():
             self.state = stateStar
             return True
