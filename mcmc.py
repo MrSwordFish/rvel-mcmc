@@ -22,7 +22,6 @@ def lnprob(x, e):
     logp = e.state.get_logp(e.obs)
     return logp
 
-
 class Ensemble(Mcmc):
     def __init__(self, initial_state, obs, scales, nwalkers=10):
         super(Ensemble,self).__init__(initial_state, obs)
@@ -36,7 +35,14 @@ class Ensemble(Mcmc):
         self.sampler = emcee.EnsembleSampler(nwalkers,self.state.Nvars, lnprob, args=[self])
 
     def step(self):
-        self.states, self.lnprob, rstate = self.sampler.run_mcmc(self.states,1,lnprob0=self.lnprob)
+        while True:
+            errorCounter = 0
+            try: 
+                self.states, self.lnprob, rstate = self.sampler.run_mcmc(self.states,1,lnprob0=self.lnprob)
+                break
+            except ValueError as err:
+                errorCounter = errorCounter+1
+                print "Alert: {c} LinAlgError have occured in a row.".format(c=errorCounter)
         return True
 
     def set_scales(self, scales):
@@ -116,9 +122,11 @@ class Smala(Mcmc):
                 	return False
                 q_ts_t = self.transitionProbability(self.state, stateStar)
                 q_t_ts = self.transitionProbability(stateStar, self.state)
+                break
             except np.linalg.linalg.LinAlgError as err:
-                errorCounter
+                errorCounter = errorCounter+1
                 print "Alert: {c} LinAlgError have occured in a row.".format(c=errorCounter)
+        print stateStar.logp-self.state.logp+q_t_ts-q_ts_t
         if np.exp(stateStar.logp-self.state.logp+q_t_ts-q_ts_t) > np.random.uniform():
             self.state = stateStar
             return True

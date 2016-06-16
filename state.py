@@ -52,8 +52,18 @@ class State(object):
     def get_logp(self, obs):
         if self.logp is None:
             self.logp = -self.get_chi2(obs)
-        return self.logp
+        if (self.priorHard()):
+            lnpri = -np.inf
+        else:
+            lnpri = 0.0
+        return self.logp + lnpri
     
+    def lnprior(theta):
+        m, a, h, k, l = theta
+        if 1e-7 < m < 0.1 and 1e-2 < a < 500.0 and h**2 + k**2 < 1.0 and -2*np.pi < l < 2*np.pi:
+            return 0.0
+        return -np.inf
+
     def shift_params(self, vec):
         self.logp = None
         if len(vec)!=self.Nvars:
@@ -186,7 +196,7 @@ class State(object):
 
     def priorHard(self):
         for i, planet in enumerate(self.planets):
-            if (self.planets[i]["a"] <=0.05) :
+            if (self.planets[i]["a"] <=0.02) :
                 print "Invalid state was proposed (a)"
                 return True
             if (self.planets[i]["m"] <=5e-6) :

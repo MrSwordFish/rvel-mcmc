@@ -5,6 +5,7 @@ import state
 import mcmc
 import numpy as np
 import corner
+from datetime import datetime
 
 def AutoCorrelation(x):
     x = np.asarray(x)
@@ -15,8 +16,9 @@ def AutoCorrelation(x):
     return result 
 
 print ("Starting, time: {t}".format(t=datetime.utcnow()))
-true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
-obs = observations.FakeObservation(true_state, Npoints=100, error=1e-4, tmax=15.)
+true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}])
+#true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
+obs = observations.FakeObservation(true_state, Npoints=100, error=2e-4, tmax=15.)
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(10,5))
 ax = plt.subplot(111)
@@ -30,9 +32,9 @@ plt.grid()
 plt.savefig('emcee_RV_Start.png', bbox_inches='tight')
 
 
-Nwalkers = 30
+Nwalkers = 20
 ens = mcmc.Ensemble(true_state,obs,scales={"m":1e-3, "a":1., "h":0.2, "k":0.2, "l":np.pi},nwalkers=Nwalkers)
-Niter = 1000
+Niter = 3000
 chain = np.zeros((Niter,ens.state.Nvars))
 chainlogp = np.zeros(Niter)
 for i in range(Niter/Nwalkers):
@@ -61,7 +63,7 @@ for c in np.random.choice(Niter,100):
     s.set_params(chain[c])
     ax.plot(*s.get_rv_plotting(obs), alpha=0.1, color="gray")
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
-ax.errorbar(obs.t, obs.rv, yerr=obs.err, ".r")
+ax.errorbar(obs.t, obs.rv, yerr=obs.err, fmt=".r")
 ax.set_xticklabels([])
 #ax.errorbar(,y,yerr=,fmt='o')
 plt.grid()
