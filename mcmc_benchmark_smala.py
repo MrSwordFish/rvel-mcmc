@@ -16,7 +16,7 @@ def AutoCorrelation(x):
     return result 
 
 print ("Starting, time: {t}".format(t=datetime.utcnow()))
-true_state = state.State(planets=[{"m":1e-3, "a":0.225, "h":0.21, "k":0.02, "l":0.3}, {"m":2e-3, "a":0.365, "h":0.15, "k":0.03, "l":2.2}])
+true_state = state.State(planets=[{"m":0.45e-3, "a":0.223, "h":0.16, "k":-0.02, "l":0.2}, {"m":2e-3, "a":0.3665, "h":0.10, "k":0.09, "l":2.32}])
 #true_state = state.State(planets=[{"m":1e-3, "a":1.225, "h":0.7, "k":0., "l":0.0},{"m":2e-3, "a":2.365, "h":0.14, "k":0., "l":0.0}])
 #obs = observations.FakeObservation(true_state, Npoints=200, error=2e-4, tmax=46.)
 obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)

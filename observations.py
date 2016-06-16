@@ -13,6 +13,7 @@ class Observation:
     errorb = None
     t = None
     rv = None
+    err = None
 
 class FakeObservation(Observation):
     def __init__(self, state, Npoints=30, error=0., tmax=1.5):
@@ -63,3 +64,4 @@ class Observation_FromFile(Observation):
         self.errorb, self.errorf = np.array_split(readerrors*3.355e-5,2)
         self.t = np.concatenate((self.tb, self.tf), axis=0)
         self.rv = np.concatenate((self.rvb, self.rvf), axis=0)
+        self.err = np.concatenate((self.errorb, self.errorf), axis=0)
