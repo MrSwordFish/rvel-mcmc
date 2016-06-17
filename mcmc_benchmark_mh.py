@@ -17,26 +17,25 @@ def AutoCorrelation(x):
 
 runName = "_1"
 print ("Starting, run:'{r}' time: {t}".format(t=datetime.utcnow(),r=runName))
-true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
-obs = observations.FakeObservation(true_state, Npoints=100, error=2e-4, tmax=15.)
+true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
+#true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
+obs = observations.FakeObservation(true_state, Npoints=160, error=1e-4, tmax=160.)
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
-ax.plot(obs.t, obs.rv, ".r")
-plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.')
+plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])
 plt.grid()
 frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])        
-plt.plot(obs.t,obs.rv-true_state.get_rv(obs.t),'or')
-plt.errorbar(obs.t, obs.rv-true_state.get_rv(obs.t), yerr=obs.err, fmt='.')
+plt.errorbar(obs.t, obs.rv-true_state.get_rv(obs.t), yerr=obs.err, fmt='.r')
 plt.grid()
 plt.savefig('mh_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 
 mh = mcmc.Mh(true_state,obs)
 mh.set_scales({"m":1e-3, "a":1., "h":0.2, "k":0.2, "l":np.pi/2.})
-mh.step_size = 4e-3
-Niter = 8000
+mh.step_size = 2e-3
+Niter = 4000
 chain = np.zeros((Niter,mh.state.Nvars))
 chainlogp = np.zeros(Niter)
 tries = 0
@@ -65,21 +64,19 @@ for c in np.random.choice(Niter,30):
     s.set_params(chain[c])
     ax.plot(*s.get_rv_plotting(obs), alpha=0.3, color="gray")
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
-ax.plot(obs.t, obs.rv, ".r")
-plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.')
+plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])
 plt.grid()
 ax2=fig.add_axes([0.125, -0.63, 0.775, 0.7]) 
 plt.plot(*mh.state.get_rv_plotting(obs), alpha=0.8,color="black")
 print "Params of last state:"
 print mh.state.get_params()
-ax2.plot(obs.t, obs.rv, ".r")
-plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.')
+plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax2.set_xticklabels([])
 plt.grid()
 ax3=fig.add_axes([0.125, -0.9, 0.775, 0.23])        
 #plt.plot(obs.t,obs.rv-mh.state.get_rv(obs.t),'or')
-plt.errorbar(obs.t, obs.rv-mh.state.get_rv(obs.t), yerr=obs.err, fmt='.')
+plt.errorbar(obs.t, obs.rv-mh.state.get_rv(obs.t), yerr=obs.err, fmt='.r')
 plt.grid()
 
 plt.savefig('mh_RV_trails{r}.png'.format(r=runName), bbox_inches='tight')

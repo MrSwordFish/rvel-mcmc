@@ -34,7 +34,7 @@ class State(object):
 
         return rv
 
-    def get_rv_plotting(self, obs, Npoints=150):
+    def get_rv_plotting(self, obs, Npoints=300):
         times = np.linspace(obs.tb[0],obs.tf[len(obs.tf)-1],Npoints)
         return times, self.get_rv(times)
 

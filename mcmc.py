@@ -30,7 +30,7 @@ class Ensemble(Mcmc):
         self.states = [self.state.get_params() for i in range(nwalkers)]
         self.lnprob = None
         for i,s in enumerate(self.states):
-            shift = 1e-2*self.scales*np.random.normal(size=self.state.Nvars)
+            shift = 5.e-3*self.scales*np.random.normal(size=self.state.Nvars)
             self.states[i] += shift
         self.sampler = emcee.EnsembleSampler(nwalkers,self.state.Nvars, lnprob, args=[self])
 
