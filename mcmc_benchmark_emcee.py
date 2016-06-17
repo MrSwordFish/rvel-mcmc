@@ -17,7 +17,7 @@ def AutoCorrelation(x):
 
 runName = "_1"
 print ("Starting, run:'{r}', time: {t}".format(t=datetime.utcnow(),r=runName))
-true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61}])
+true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
 #true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
 #true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
 obs = observations.FakeObservation(true_state, Npoints=100, error=1e-4, tmax=125.)
@@ -26,17 +26,19 @@ fig = plt.figure(figsize=(10,5))
 ax = plt.subplot(111)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
 ax.plot(obs.t, obs.rv, ".r")
+plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.')
 ax.set_xticklabels([])
 plt.grid()
 frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])        
 plt.plot(obs.t,obs.rv-true_state.get_rv(obs.t),'or')
+plt.errorbar(obs.t, obs.rv-ens.state.get_rv(obs.t), yerr=obs.err, fmt='.')
 plt.grid()
 plt.savefig('emcee_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 
 
 Nwalkers = 20
 ens = mcmc.Ensemble(true_state,obs,scales={"m":1.e-3, "a":1., "h":0.2, "k":0.2, "l":np.pi},nwalkers=Nwalkers)
-Niter = 4500
+Niter = 9500
 chain = np.zeros((Niter,ens.state.Nvars))
 chainlogp = np.zeros(Niter)
 for i in range(Niter/Nwalkers):
