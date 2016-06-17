@@ -29,13 +29,13 @@ plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])
 plt.grid()
 frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])        
-plt.errorbar(obs.t, obs.rv-true_state.get_rv(obs.t), yerr=obs.err, fmt='.r')
+plt.errorbar(obs.t, true_state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
 plt.grid()
 plt.savefig('emcee_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 
 Nwalkers = 20
 ens = mcmc.Ensemble(true_state,obs,scales={"m":1.e-3, "a":1., "h":0.2, "k":0.2, "l":np.pi},nwalkers=Nwalkers)
-Niter = 6000
+Niter = 3000
 chain = np.zeros((Niter,ens.state.Nvars))
 chainlogp = np.zeros(Niter)
 for i in range(Niter/Nwalkers):
@@ -57,10 +57,10 @@ plt.savefig('emcee_Chains{r}.png'.format(r=runName), bbox_inches='tight')
 
 fig = plt.figure(figsize=(13,5))
 ax = plt.subplot(111)
-for c in np.random.choice(Niter,30):
+for c in np.random.choice(Niter,120):
     s = ens.state.deepcopy()
     s.set_params(chain[c])
-    ax.plot(*s.get_rv_plotting(obs), alpha=0.3, color="gray")
+    ax.plot(*s.get_rv_plotting(obs), alpha=0.08, color="cornflowerblue")
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
 plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])
@@ -73,8 +73,8 @@ plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax2.set_xticklabels([])
 plt.grid()
 ax3=fig.add_axes([0.125, -0.9, 0.775, 0.23])        
-#plt.plot(obs.t,obs.rv-ens.state.get_rv(obs.t),'or')
-plt.errorbar(obs.t, obs.rv-ens.state.get_rv(obs.t), yerr=obs.err, fmt='.r')
+#plt.plot(obs.t,ens.state.get_rv(obs.t)-obs.rv,'or')
+plt.errorbar(obs.t, ens.state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
 plt.grid()
 
 plt.savefig('emcee_RV_trails{r}.png'.format(r=runName), bbox_inches='tight')
