@@ -47,7 +47,7 @@ for i in range(Niter):
         print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
 print("Acceptance rate: %.3f%%"%(float(Niter)/tries*100))
 
-fig = plt.figure(figsize=(20,10))
+fig = plt.figure(figsize=(23,12))
 for i in range(mh.state.Nvars):
     ax = plt.subplot(mh.state.Nvars+1,1,1+i)
     ax.set_ylabel(mh.state.get_keys()[i])
@@ -57,12 +57,12 @@ ax.set_ylabel("$\log(p)$")
 ax.plot(chainlogp)    
 plt.savefig('mh_Chains{r}.png'.format(r=runName), bbox_inches='tight')
 
-fig = plt.figure(figsize=(18,8))
+fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
-for c in np.random.choice(Niter,30):
+for c in np.random.choice(Niter,45):
     s = mh.state.deepcopy()
     s.set_params(chain[c])
-    ax.plot(*s.get_rv_plotting(obs), alpha=0.3, color="gray")
+    ax.plot(*s.get_rv_plotting(obs), alpha=0.16, color="darkolivegreen")
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
 plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])

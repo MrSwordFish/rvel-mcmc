@@ -22,7 +22,7 @@ true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "
 #true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
 obs = observations.FakeObservation(true_state, Npoints=160, error=1e-4, tmax=160.)
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
-fig = plt.figure(figsize=(10,5))
+fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
 plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
@@ -45,7 +45,7 @@ for i in range(Niter/Nwalkers):
         chainlogp[j*Niter/Nwalkers+i] = ens.lnprob[j]
     if i%30: print ("Progress: {p:.5}%, time: {t}".format(p=100.*(float(i)/(Niter/Nwalkers)),t=datetime.utcnow()))
 
-fig = plt.figure(figsize=(25,13))
+fig = plt.figure(figsize=(23,12))
 for i in range(ens.state.Nvars):
     ax = plt.subplot(ens.state.Nvars+1,1,1+i)
     ax.set_ylabel(ens.state.get_keys()[i])
@@ -55,12 +55,12 @@ ax.set_ylabel("$\log(p)$")
 ax.plot(chainlogp)    
 plt.savefig('emcee_Chains{r}.png'.format(r=runName), bbox_inches='tight')
 
-fig = plt.figure(figsize=(13,5))
+fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
-for c in np.random.choice(Niter,120):
+for c in np.random.choice(Niter,45):
     s = ens.state.deepcopy()
     s.set_params(chain[c])
-    ax.plot(*s.get_rv_plotting(obs), alpha=0.08, color="cornflowerblue")
+    ax.plot(*s.get_rv_plotting(obs), alpha=0.16, color="darkolivegreen")
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
 plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])
@@ -81,7 +81,7 @@ plt.savefig('emcee_RV_trails{r}.png'.format(r=runName), bbox_inches='tight')
 
 figure = corner.corner(chain, labels=s.get_keys(), plot_contours=False, truths=true_state.get_params(),label_kwargs={"fontsize":20})
 plt.savefig('emcee_Corners{r}.png'.format(r=runName), bbox_inches='tight')
-fig = plt.figure(figsize=(14,8))
+fig = plt.figure(figsize=(18,10))
 for i in range(s.Nvars):
     fig.suptitle('Autocorelation', fontsize=12)
     ax = plt.subplot(s.Nvars+1,1,1+i)
