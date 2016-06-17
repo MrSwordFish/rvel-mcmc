@@ -46,6 +46,7 @@ class FakeObservation(Observation):
 
         self.t = np.concatenate((self.tb, self.tf), axis=0)
         self.rv = np.concatenate((self.rvb, self.rvf), axis=0)
+        self.err = np.concatenate((self.errorb, self.errorf), axis=0)
 
 class Observation_FromFile(Observation):
     def __init__(self, filename='yourfile.txt', Npoints=30):

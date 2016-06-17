@@ -35,14 +35,14 @@ class Ensemble(Mcmc):
         self.sampler = emcee.EnsembleSampler(nwalkers,self.state.Nvars, lnprob, args=[self])
 
     def step(self):
+        errorCounter = 0
         while True:
-            errorCounter = 0
             try: 
                 self.states, self.lnprob, rstate = self.sampler.run_mcmc(self.states,1,lnprob0=self.lnprob)
                 break
             except ValueError as err:
                 errorCounter = errorCounter+1
-                print "Alert: {c} LinAlgError have occured in a row.".format(c=errorCounter)
+                print "Alert: {c} ValueError(s) have occured in a row.".format(c=errorCounter)
         return True
 
     def set_scales(self, scales):
@@ -114,8 +114,8 @@ class Smala(Mcmc):
         return stats.multivariate_normal.logpdf(state_to.get_params(),mean=mu, cov=(self.epsilon)**2*Ginv)
         
     def step(self):
+        errorCounter = 0
         while True:
-            errorCounter = 0
             try: 
                 stateStar = self.generate_proposal()
                 if (stateStar.priorHard()):
