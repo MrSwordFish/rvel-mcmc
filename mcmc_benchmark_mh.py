@@ -18,7 +18,7 @@ def AutoCorrelation(x):
 runName = "_1"
 print ("Starting, run:'{r}' time: {t}".format(t=datetime.utcnow(),r=runName))
 true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
-obs = observations.FakeObservation(true_state, Npoints=100, error=8e-4, tmax=15.)
+obs = observations.FakeObservation(true_state, Npoints=100, error=2e-4, tmax=15.)
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
@@ -29,14 +29,14 @@ ax.set_xticklabels([])
 plt.grid()
 frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])        
 plt.plot(obs.t,obs.rv-true_state.get_rv(obs.t),'or')
-plt.errorbar(obs.t, obs.rv-ens.state.get_rv(obs.t), yerr=obs.err, fmt='.')
+plt.errorbar(obs.t, obs.rv-true_state.get_rv(obs.t), yerr=obs.err, fmt='.')
 plt.grid()
 plt.savefig('mh_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 
 mh = mcmc.Mh(true_state,obs)
-mh.set_scales({"m":6e-4, "a":0.02, "h":0.02, "k":0.02, "l":np.pi/6.})
-mh.step_size = 6e-2
-Niter = 6000
+mh.set_scales({"m":1e-3, "a":1., "h":0.2, "k":0.2, "l":np.pi/2.})
+mh.step_size = 4e-3
+Niter = 8000
 chain = np.zeros((Niter,mh.state.Nvars))
 chainlogp = np.zeros(Niter)
 tries = 0
@@ -44,7 +44,7 @@ for i in range(Niter):
     tries += mh.step_force()
     chain[i] = mh.state.get_params()
     chainlogp[i] = mh.state.logp
-    if(i % 50 == 1):
+    if(i % 150 == 1):
         print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
 print("Acceptance rate: %.3f%%"%(float(Niter)/tries*100))
 

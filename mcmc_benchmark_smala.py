@@ -30,7 +30,7 @@ ax.set_xticklabels([])
 plt.grid()
 frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])        
 plt.plot(obs.t,obs.rv-true_state.get_rv(obs.t),'or')
-plt.errorbar(obs.t, obs.rv-ens.state.get_rv(obs.t), yerr=obs.err, fmt='.')
+plt.errorbar(obs.t, obs.rv-smala.state.get_rv(obs.t), yerr=obs.err, fmt='.')
 plt.grid()
 plt.savefig('smala_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 
