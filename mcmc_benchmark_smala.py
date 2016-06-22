@@ -17,10 +17,10 @@ def AutoCorrelation(x):
 
 runName = "_1"
 print ("Starting, run:'{r}', time: {t}".format(t=datetime.utcnow(),r=runName))
-true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
+true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.1}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
 #true_state = state.State(planets=[{"m":0.45e-3, "a":0.223, "h":0.16, "k":-0.02, "l":0.2}, {"m":2e-3, "a":0.3665, "h":0.10, "k":0.09, "l":2.32}])
 #true_state = state.State(planets=[{"m":1e-3, "a":1.225, "h":0.7, "k":0., "l":0.0},{"m":2e-3, "a":2.365, "h":0.14, "k":0., "l":0.0}])
-obs = observations.FakeObservation(true_state, Npoints=160, error=1e-4, tmax=160.)
+obs = observations.FakeObservation(true_state, Npoints=100, error=1e-4, tmax=80.)
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
@@ -34,7 +34,7 @@ plt.grid()
 plt.savefig('smala_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 
 smala = mcmc.Smala(true_state,obs)
-Niter = 200
+Niter = 3000
 chain = np.zeros((Niter,smala.state.Nvars))
 chainlogp = np.zeros(Niter)
 tries = 0

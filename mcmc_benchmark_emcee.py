@@ -17,10 +17,10 @@ def AutoCorrelation(x):
 
 runName = "_1"
 print ("Starting, run:'{r}', time: {t}".format(t=datetime.utcnow(),r=runName))
-true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
+true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.1}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
 #true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
 #true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
-obs = observations.FakeObservation(true_state, Npoints=160, error=1e-4, tmax=160.)
+obs = observations.FakeObservation(true_state, Npoints=200, error=1e-4, tmax=200.)
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
@@ -34,8 +34,8 @@ plt.grid()
 plt.savefig('emcee_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 
 Nwalkers = 20
-ens = mcmc.Ensemble(true_state,obs,scales={"m":1.e-3, "a":1., "h":0.2, "k":0.2, "l":np.pi},nwalkers=Nwalkers)
-Niter = 3000
+ens = mcmc.Ensemble(true_state,obs,scales={"m":1.e-3, "a":1., "h":0.4, "k":0.4, "l":np.pi},nwalkers=Nwalkers)
+Niter = 20000
 chain = np.zeros((Niter,ens.state.Nvars))
 chainlogp = np.zeros(Niter)
 for i in range(Niter/Nwalkers):

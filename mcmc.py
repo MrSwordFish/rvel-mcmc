@@ -30,7 +30,7 @@ class Ensemble(Mcmc):
         self.states = [self.state.get_params() for i in range(nwalkers)]
         self.lnprob = None
         for i,s in enumerate(self.states):
-            shift = 5.e-3*self.scales*np.random.normal(size=self.state.Nvars)
+            shift = 1.e-2*self.scales*np.random.normal(size=self.state.Nvars)
             self.states[i] += shift
         self.sampler = emcee.EnsembleSampler(nwalkers,self.state.Nvars, lnprob, args=[self])
 
@@ -84,7 +84,7 @@ class Mh(Mcmc):
             return True
         return False
 
-alpha = 1.
+alpha = 0.4
 def softabs(hessians):
     lam, Q = np.linalg.eig(-hessians)
     lam_twig = lam*1./np.tanh(alpha*lam)
@@ -94,7 +94,7 @@ def softabs(hessians):
 class Smala(Mcmc):
     def __init__(self, initial_state, obs):
         super(Smala,self).__init__(initial_state, obs)
-        self.epsilon = 0.5
+        self.epsilon = 0.30
 
     def generate_proposal(self):
         logp, logp_d, logp_dd = self.state.get_logp_d_dd(self.obs) 
