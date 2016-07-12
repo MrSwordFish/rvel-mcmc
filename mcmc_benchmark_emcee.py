@@ -7,6 +7,9 @@ import numpy as np
 import corner
 from datetime import datetime
 
+runName = "_normaltest"
+logging=True
+
 def AutoCorrelation(x):
     x = np.asarray(x)
     y = x-x.mean()
@@ -15,12 +18,20 @@ def AutoCorrelation(x):
     result /= result[0]
     return result 
 
-runName = "_1"
+def writingToLog(obj, logging):
+    if(logging):
+        with open("log{r}".format(r=runName),"a") as a:
+            for index,value in np.ndenumerate(obj):
+                a.write("{v} ".format(v=value))
+            a.write("\n")
+    else:
+        a=None
+
 print ("Starting, run:'{r}', time: {t}".format(t=datetime.utcnow(),r=runName))
-true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.1}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
-#true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
-#true_state = state.State(planets=[{"m":1.2e-3, "a":0.22, "h":0.218, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":0.361, "h":0.16, "k":0.02, "l":2.2}])
-obs = observations.FakeObservation(true_state, Npoints=200, error=1e-4, tmax=200.)
+writingToLog("START",logging); writingToLog(datetime.utcnow(),logging)
+#true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.1}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":2.2}])
+true_state = state.State(planets=[{"m":1.2e-3, "a":5.*0.22, "h":0.21, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":5.*0.36, "h":0.16, "k":0.02, "l":2.2}])
+obs = observations.FakeObservation(true_state, Npoints=200, error=1.5e-4, errorVar=2.5e-5, tmax=(70))
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
@@ -32,10 +43,13 @@ frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])
 plt.errorbar(obs.t, true_state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
 plt.grid()
 plt.savefig('emcee_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
+writingToLog("OBSRV",logging); writingToLog(obs.rv,logging)
+writingToLog("*STARTSTATE",logging); writingToLog(*true_state.get_rv_plotting(obs),logging)
+writingToLog("OBSTIMES",logging); writingToLog(obs.rv,logging)
 
 Nwalkers = 20
 ens = mcmc.Ensemble(true_state,obs,scales={"m":1.e-3, "a":1., "h":0.4, "k":0.4, "l":np.pi},nwalkers=Nwalkers)
-Niter = 20000
+Niter = 42000
 chain = np.zeros((Niter,ens.state.Nvars))
 chainlogp = np.zeros(Niter)
 for i in range(Niter/Nwalkers):
@@ -43,7 +57,8 @@ for i in range(Niter/Nwalkers):
     for j in range(Nwalkers):
         chain[j*Niter/Nwalkers+i] = ens.states[j]
         chainlogp[j*Niter/Nwalkers+i] = ens.lnprob[j]
-    if i%30: print ("Progress: {p:.5}%, time: {t}".format(p=100.*(float(i)/(Niter/Nwalkers)),t=datetime.utcnow()))
+    if (i%20==1): print ("Progress: {p:.5}%, time: {t}".format(p=100.*(float(i)/(Niter/Nwalkers)),t=datetime.utcnow()))
+print("Error(s): {e}".format(e=ens.totalErrorCount))
 
 fig = plt.figure(figsize=(23,12))
 for i in range(ens.state.Nvars):
@@ -57,24 +72,27 @@ plt.savefig('emcee_Chains{r}.png'.format(r=runName), bbox_inches='tight')
 
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
+averageRandomChain = np.zeros(ens.state.Nvars)
 for c in np.random.choice(Niter,45):
     s = ens.state.deepcopy()
     s.set_params(chain[c])
+    averageRandomChain += chain[c]
     ax.plot(*s.get_rv_plotting(obs), alpha=0.16, color="darkolivegreen")
+averageRandomState = ens.state.deepcopy()
+averageRandomState.set_params(averageRandomChain/45)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
 plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])
 plt.grid()
 ax2=fig.add_axes([0.125, -0.63, 0.775, 0.7]) 
-plt.plot(*ens.state.get_rv_plotting(obs), alpha=0.8,color="black")
-print "Params of last state:"
-print ens.state.get_params()
+plt.plot(*averageRandomState.get_rv_plotting(obs), alpha=0.8,color="black")
+print "Average params state (randomly sampled):"
+print averageRandomState.get_params()
 plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax2.set_xticklabels([])
 plt.grid()
 ax3=fig.add_axes([0.125, -0.9, 0.775, 0.23])        
-#plt.plot(obs.t,ens.state.get_rv(obs.t)-obs.rv,'or')
-plt.errorbar(obs.t, ens.state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
+plt.errorbar(obs.t, averageRandomState.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
 plt.grid()
 
 plt.savefig('emcee_RV_trails{r}.png'.format(r=runName), bbox_inches='tight')
