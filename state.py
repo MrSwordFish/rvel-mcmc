@@ -34,7 +34,7 @@ class State(object):
 
         return rv
 
-    def get_rv_plotting(self, obs, Npoints=300):
+    def get_rv_plotting(self, obs, Npoints=1000):
         times = np.linspace(obs.tb[0],obs.tf[len(obs.tf)-1],Npoints)
         return times, self.get_rv(times)
 
@@ -60,7 +60,7 @@ class State(object):
     
     def lnprior(theta):
         m, a, h, k, l = theta
-        if 1e-7 < m < 0.1 and 1e-2 < a < 500.0 and h**2 + k**2 < 1.0 and -2*np.pi < l < 2*np.pi:
+        if (1e-7 < m < 0.1) and (1e-2 < a < 500.0) and ((h**2 + k**2) < 1.0) and (-2*np.pi < l < 2*np.pi):
             return 0.0
         return -np.inf
 

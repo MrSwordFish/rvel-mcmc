@@ -29,8 +29,9 @@ class Ensemble(Mcmc):
         self.nwalkers = nwalkers
         self.states = [self.state.get_params() for i in range(nwalkers)]
         self.lnprob = None
+        self.totalErrorCount = 0
         for i,s in enumerate(self.states):
-            shift = 1.e-2*self.scales*np.random.normal(size=self.state.Nvars)
+            shift = 0.1e-2*self.scales*np.random.normal(size=self.state.Nvars)
             self.states[i] += shift
         self.sampler = emcee.EnsembleSampler(nwalkers,self.state.Nvars, lnprob, args=[self])
 
@@ -42,6 +43,7 @@ class Ensemble(Mcmc):
                 break
             except ValueError as err:
                 errorCounter = errorCounter+1
+                self.totalErrorCount=self.totalErrorCount+1
                 print "Alert: {c} ValueError(s) have occured in a row.".format(c=errorCounter)
         return True
 
@@ -84,7 +86,7 @@ class Mh(Mcmc):
             return True
         return False
 
-alpha = 0.4
+alpha = 1.4
 def softabs(hessians):
     lam, Q = np.linalg.eig(-hessians)
     lam_twig = lam*1./np.tanh(alpha*lam)
@@ -94,7 +96,7 @@ def softabs(hessians):
 class Smala(Mcmc):
     def __init__(self, initial_state, obs):
         super(Smala,self).__init__(initial_state, obs)
-        self.epsilon = 0.30
+        self.epsilon = 0.2
 
     def generate_proposal(self):
         logp, logp_d, logp_dd = self.state.get_logp_d_dd(self.obs) 

@@ -7,7 +7,7 @@ import numpy as np
 import corner
 from datetime import datetime
 
-runName = "_normaltest"
+runName = "_realtest_7__"
 logging=True
 
 def AutoCorrelation(x):
@@ -30,9 +30,9 @@ def writingToLog(obj, logging):
 print ("Starting, run:'{r}', time: {t}".format(t=datetime.utcnow(),r=runName))
 writingToLog("START",logging); writingToLog(datetime.utcnow(),logging)
 #true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.1}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":2.2}])
-true_state = state.State(planets=[{"m":1.2e-3, "a":5.*0.22, "h":0.21, "k":0.015, "l":0.3}, {"m":2.1e-3, "a":5.*0.36, "h":0.16, "k":0.02, "l":2.2}])
-obs = observations.FakeObservation(true_state, Npoints=200, error=1.5e-4, errorVar=2.5e-5, tmax=(70))
-#obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
+true_state = state.State(planets=[{"m":0.94e-3, "a":0.226, "h":-0.045, "k":-0.015, "l":1.265}, {"m":1.965e-3, "a":0.307, "h":-0.035, "k":-0.00, "l":1.76}])
+#obs = observations.FakeObservation(true_state, Npoints=200, error=1.5e-4, errorVar=2.5e-5, tmax=(30))
+obs = observations.Observation_FromFile(filename='TEST_3-2_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
@@ -44,12 +44,12 @@ plt.errorbar(obs.t, true_state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
 plt.grid()
 plt.savefig('emcee_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
 writingToLog("OBSRV",logging); writingToLog(obs.rv,logging)
-writingToLog("*STARTSTATE",logging); writingToLog(*true_state.get_rv_plotting(obs),logging)
+writingToLog("STARTSTATE",logging); writingToLog(true_state.get_rv_plotting(obs),logging)
 writingToLog("OBSTIMES",logging); writingToLog(obs.rv,logging)
 
-Nwalkers = 20
-ens = mcmc.Ensemble(true_state,obs,scales={"m":1.e-3, "a":1., "h":0.4, "k":0.4, "l":np.pi},nwalkers=Nwalkers)
-Niter = 42000
+Nwalkers = 32
+ens = mcmc.Ensemble(true_state,obs,scales={"m":1.5e-3, "a":0.3, "h":0.1, "k":0.1, "l":np.pi/2.},nwalkers=Nwalkers)
+Niter = 25000
 chain = np.zeros((Niter,ens.state.Nvars))
 chainlogp = np.zeros(Niter)
 for i in range(Niter/Nwalkers):
@@ -57,7 +57,7 @@ for i in range(Niter/Nwalkers):
     for j in range(Nwalkers):
         chain[j*Niter/Nwalkers+i] = ens.states[j]
         chainlogp[j*Niter/Nwalkers+i] = ens.lnprob[j]
-    if (i%20==1): print ("Progress: {p:.5}%, time: {t}".format(p=100.*(float(i)/(Niter/Nwalkers)),t=datetime.utcnow()))
+    if (i%10==1): print ("Progress: {p:.5}%, time: {t}".format(p=100.*(float(i)/(Niter/Nwalkers)),t=datetime.utcnow()))
 print("Error(s): {e}".format(e=ens.totalErrorCount))
 
 fig = plt.figure(figsize=(23,12))
@@ -78,6 +78,7 @@ for c in np.random.choice(Niter,45):
     s.set_params(chain[c])
     averageRandomChain += chain[c]
     ax.plot(*s.get_rv_plotting(obs), alpha=0.16, color="darkolivegreen")
+    writingToLog("RDMGHOSTS",logging); writingToLog(s.get_rv_plotting(obs),logging)
 averageRandomState = ens.state.deepcopy()
 averageRandomState.set_params(averageRandomChain/45)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")

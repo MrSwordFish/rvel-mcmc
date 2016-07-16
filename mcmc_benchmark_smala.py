@@ -27,13 +27,13 @@ def writingToLog(obj, logging):
     else:
         a=None
 
-runName = "_1"
+runName = "_test"
 print ("Starting, run:'{r}', time: {t}".format(t=datetime.utcnow(),r=runName))
 writingToLog("START",logging); writingToLog(datetime.utcnow(),logging)
 true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.1}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
 #true_state = state.State(planets=[{"m":0.45e-3, "a":0.223, "h":0.16, "k":-0.02, "l":0.2}, {"m":2e-3, "a":0.3665, "h":0.10, "k":0.09, "l":2.32}])
 #true_state = state.State(planets=[{"m":1e-3, "a":1.225, "h":0.7, "k":0., "l":0.0},{"m":2e-3, "a":2.365, "h":0.14, "k":0., "l":0.0}])
-obs = observations.FakeObservation(true_state, Npoints=200, error=2e-4, tmax=80.)
+obs = observations.FakeObservation(true_state, Npoints=100, error=1.5e-4, errorVar=2.5e-5, tmax=(60))
 #obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
@@ -45,12 +45,12 @@ frame2=fig.add_axes([0.125, -0.17, 0.775, 0.22])
 plt.errorbar(obs.t, true_state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
 plt.grid()
 plt.savefig('smala_RV_Start{r}.png'.format(r=runName), bbox_inches='tight')
+writingToLog("STARTSTATE",logging); writingToLog(true_state.get_rv_plotting(obs),logging)
 writingToLog("OBSRV",logging); writingToLog(obs.rv,logging)
-writingToLog("*STARTSTATE",logging); writingToLog(*true_state.get_rv_plotting(obs),logging)
 writingToLog("OBSTIMES",logging); writingToLog(obs.rv,logging)
 
 smala = mcmc.Smala(true_state,obs)
-Niter = 3000
+Niter = 300
 chain = np.zeros((Niter,smala.state.Nvars))
 chainlogp = np.zeros(Niter)
 tries = 0
@@ -81,6 +81,7 @@ for c in np.random.choice(Niter,45):
     s.set_params(chain[c])
     averageRandomChain += chain[c]
     ax.plot(*s.get_rv_plotting(obs), alpha=0.16, color="darkolivegreen")
+    writingToLog("RDMGHOSTS",logging); writingToLog(s.get_rv_plotting(obs),logging)
 averageRandomState = smala.state.deepcopy()
 averageRandomState.set_params(averageRandomChain/45)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
@@ -88,7 +89,7 @@ plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
 ax.set_xticklabels([])
 plt.grid()
 ax2=fig.add_axes([0.125, -0.63, 0.775, 0.7]) 
-plt.plot(*averageRandomState.state.get_rv_plotting(obs), alpha=0.8,color="black")
+plt.plot(*averageRandomState.get_rv_plotting(obs), alpha=0.8,color="black")
 print "Average params state (randomly sampled):"
 print averageRandomState.get_params()
 plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
