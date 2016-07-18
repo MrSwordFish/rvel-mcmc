@@ -96,7 +96,7 @@ def softabs(hessians):
 class Smala(Mcmc):
     def __init__(self, initial_state, obs):
         super(Smala,self).__init__(initial_state, obs)
-        self.epsilon = 0.2
+        self.epsilon = 0.17
 
     def generate_proposal(self):
         logp, logp_d, logp_dd = self.state.get_logp_d_dd(self.obs) 

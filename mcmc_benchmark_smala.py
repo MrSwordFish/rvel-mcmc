@@ -7,7 +7,7 @@ import numpy as np
 import corner
 from datetime import datetime
 
-runName = "_workingcase_0.8"
+runName = "_Ben-3-2"
 logging=True
 
 def AutoCorrelation(x):
@@ -27,14 +27,15 @@ def writingToLog(obj, logging):
     else:
         a=None
 
-runName = "_test"
 print ("Starting, run:'{r}', time: {t}".format(t=datetime.utcnow(),r=runName))
 writingToLog("START",logging); writingToLog(datetime.utcnow(),logging)
-true_state = state.State(planets=[{"m":1.2e-3, "a":1.42, "h":0.218, "k":0.015, "l":0.1}, {"m":2.1e-3, "a":2.61, "h":0.16, "k":0.02, "l":0.3}])
+#true_state = state.State(planets=[{"m":0.92e-3, "a":0.2275, "h":-0.06, "k":0.015, "l":-1.0}, {"m":1.95e-3, "a":0.3665, "h":0.02, "k":0.0, "l":2.1}])
+#true_state = state.State(planets=[{"m":0.92e-3, "a":0.2285, "h":0.05, "k":0.015, "l":-1.8}, {"m":1.95e-3, "a":0.4778, "h":0.01, "k":0.0, "l":2.15}])
 #true_state = state.State(planets=[{"m":0.45e-3, "a":0.223, "h":0.16, "k":-0.02, "l":0.2}, {"m":2e-3, "a":0.3665, "h":0.10, "k":0.09, "l":2.32}])
+true_state = state.State(planets=[{"m":0.9e-3, "a":0.226, "h":-0.06, "k":-0.015, "l":1.3}, {"m":1.85e-3, "a":0.3057, "h":-0.03, "k":-0.01, "l":1.75}])
 #true_state = state.State(planets=[{"m":1e-3, "a":1.225, "h":0.7, "k":0., "l":0.0},{"m":2e-3, "a":2.365, "h":0.14, "k":0., "l":0.0}])
-obs = observations.FakeObservation(true_state, Npoints=100, error=1.5e-4, errorVar=2.5e-5, tmax=(60))
-#obs = observations.Observation_FromFile(filename='TEST_2-1_COMPACT.vels', Npoints=100)
+#obs = observations.FakeObservation(true_state, Npoints=60, error=1.5e-4, errorVar=2.5e-5, tmax=(30))
+obs = observations.Observation_FromFile(filename='TEST_3-2_COMPACT.vels', Npoints=100)
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")
@@ -50,7 +51,7 @@ writingToLog("OBSRV",logging); writingToLog(obs.rv,logging)
 writingToLog("OBSTIMES",logging); writingToLog(obs.rv,logging)
 
 smala = mcmc.Smala(true_state,obs)
-Niter = 300
+Niter = 4500
 chain = np.zeros((Niter,smala.state.Nvars))
 chainlogp = np.zeros(Niter)
 tries = 0
