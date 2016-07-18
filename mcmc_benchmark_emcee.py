@@ -47,9 +47,9 @@ writingToLog("OBSRV",logging); writingToLog(obs.rv,logging)
 writingToLog("STARTSTATE",logging); writingToLog(true_state.get_rv_plotting(obs),logging)
 writingToLog("OBSTIMES",logging); writingToLog(obs.rv,logging)
 
-Nwalkers = 32
+Nwalkers = 24
 ens = mcmc.Ensemble(true_state,obs,scales={"m":1.5e-3, "a":0.3, "h":0.1, "k":0.1, "l":np.pi/2.},nwalkers=Nwalkers)
-Niter = 25000
+Niter = 10000
 chain = np.zeros((Niter,ens.state.Nvars))
 chainlogp = np.zeros(Niter)
 for i in range(Niter/Nwalkers):
@@ -79,6 +79,7 @@ for c in np.random.choice(Niter,45):
     averageRandomChain += chain[c]
     ax.plot(*s.get_rv_plotting(obs), alpha=0.16, color="darkolivegreen")
     writingToLog("RDMGHOSTS",logging); writingToLog(s.get_rv_plotting(obs),logging)
+    writingToLog("RDMGHOSTS LNPROB",logging); writingToLog(s.get_logp(obs),logging)
 averageRandomState = ens.state.deepcopy()
 averageRandomState.set_params(averageRandomChain/45)
 ax.plot(*true_state.get_rv_plotting(obs), color="blue")

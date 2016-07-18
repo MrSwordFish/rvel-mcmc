@@ -128,6 +128,15 @@ class Smala(Mcmc):
             except np.linalg.linalg.LinAlgError as err:
                 errorCounter = errorCounter+1
                 print "Alert: {c} LinAlgError have occured in a row.".format(c=errorCounter)
+                logp, logp_d, logp_dd = self.state.get_logp_d_dd(self.obs)
+                print logp_dd
+                Ginv = np.linalg.inv(softabs(logp_dd))
+                print Ginv
+                alogp, alogp_d, alogp_dd = stateStar.get_logp_d_dd(self.obs)
+                print alogp_dd
+                aGinv = np.linalg.inv(softabs(alogp_dd))
+                print aGinv
+
         print stateStar.logp-self.state.logp+q_t_ts-q_ts_t
         if np.exp(stateStar.logp-self.state.logp+q_t_ts-q_ts_t) > np.random.uniform():
             self.state = stateStar
