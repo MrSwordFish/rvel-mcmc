@@ -77,7 +77,7 @@ plt.savefig('smala_Chains{r}.png'.format(r=runName), bbox_inches='tight')
 fig = plt.figure(figsize=(20,10))
 ax = plt.subplot(111)
 averageRandomChain = np.zeros(smala.state.Nvars)
-for c in np.random.choice(Niter,45):
+for c in np.random.randint(Niter/4.,Niter,size=45):
     s = smala.state.deepcopy()
     s.set_params(chain[c])
     averageRandomChain += chain[c]

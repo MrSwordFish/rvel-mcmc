@@ -78,7 +78,7 @@ fig = plt.figure(figsize=(20,10))
 plt.title("RV data & starting state vs Time with ghosts")
 ax = plt.subplot(111)
 averageRandomChain = np.zeros(mh.state.Nvars)
-for c in np.random.choice(Niter,45):
+for c in np.random.randint(Niter/4.,Niter,size=45)::
     s = mh.state.deepcopy()
     s.set_params(chain[c])
     averageRandomChain += chain[c]
