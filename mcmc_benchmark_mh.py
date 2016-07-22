@@ -7,7 +7,7 @@ import numpy as np
 import corner
 from datetime import datetime
 
-runName = "_workingcase_0.8.99"
+runName = "_burnin"
 logging=True
 
 def AutoCorrelation(x):
@@ -51,7 +51,7 @@ writingToLog("OBSTIMES",logging); writingToLog(obs.rv,logging)
 mh = mcmc.Mh(true_state,obs)
 mh.set_scales({"m":1.e-3, "a":0.3, "h":0.5, "k":0.5, "l":np.pi/2.})
 mh.step_size = 10.0e-3
-Niter = 80000
+Niter = 6000
 chain = np.zeros((Niter,mh.state.Nvars))
 chainlogp = np.zeros(Niter)
 tries = 0
@@ -78,7 +78,7 @@ fig = plt.figure(figsize=(20,10))
 plt.title("RV data & starting state vs Time with ghosts")
 ax = plt.subplot(111)
 averageRandomChain = np.zeros(mh.state.Nvars)
-for c in np.random.choice(Niter,45):
+for c in np.random.randint(Niter/4.,Niter,size=45):
     s = mh.state.deepcopy()
     s.set_params(chain[c])
     averageRandomChain += chain[c]
