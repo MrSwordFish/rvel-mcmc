@@ -6,6 +6,10 @@ This is an implementation of various Markov Chain Monte Carlo methods to solve f
 
 '$python -m cProfile [-o output_file] [-s sort_order] mcmc_benchmark_*.py'
 
+##Installation
+
+To run these many packages are needed. Rebound can be installed using '$pip install rebound'. Similarly for Numpy, Matplotlib and Corner.
+
 ## License
 
 Figure this out later.
