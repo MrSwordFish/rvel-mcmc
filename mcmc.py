@@ -1,7 +1,12 @@
 import numpy as np
 import emcee
 from scipy import stats
+import rebound
+from datetime import datetime
 
+'''
+Parent MCMC class
+'''
 class Mcmc(object):
     def __init__(self, initial_state, obs):
         self.state = initial_state.deepcopy()
@@ -17,11 +22,15 @@ class Mcmc(object):
             pass
         return tries
 
+#create a lnprob function to pass to the emcee package
 def lnprob(x, e):
     e.state.set_params(x)
     logp = e.state.get_logp(e.obs)
     return logp
 
+'''
+emcee MCMC coupled with rebound.
+'''
 class Ensemble(Mcmc):
     def __init__(self, initial_state, obs, scales, nwalkers=10):
         super(Ensemble,self).__init__(initial_state, obs)
@@ -45,6 +54,8 @@ class Ensemble(Mcmc):
                 errorCounter = errorCounter+1
                 self.totalErrorCount=self.totalErrorCount+1
                 print "Alert: {c} ValueError(s) have occured in a row.".format(c=errorCounter)
+            #except rebound.Encounter as err:
+            #    print "Collision! {t} \n".format(t=datetime.utcnow())
         return True
 
     def set_scales(self, scales):
@@ -54,9 +65,9 @@ class Ensemble(Mcmc):
             if k in scales:
                 self.scales[i] = scales[k]
 
-
-
-
+'''
+Metropolis-Hastings MCMC coupled with rebound.
+'''
 class Mh(Mcmc):
     def __init__(self, initial_state, obs):
         super(Mh,self).__init__(initial_state, obs)
@@ -76,27 +87,37 @@ class Mh(Mcmc):
                 self.scales[i] = scales[k]
 
     def step(self):
-        logp = self.state.get_logp(self.obs)
-        proposal = self.generate_proposal() 
-        if (proposal.priorHard()):
-            return False
-        logp_proposal = proposal.get_logp(self.obs)
-        if np.exp(logp_proposal-logp)>np.random.uniform():
-            self.state = proposal
-            return True
-        return False
+        errorCounter = 0
+        while True:
+            try:
+                logp = self.state.get_logp(self.obs)
+                proposal = self.generate_proposal() 
+                if (proposal.priorHard()):
+                    return False
+                logp_proposal = proposal.get_logp(self.obs)
+                if np.exp(logp_proposal-logp)>np.random.uniform():
+                    self.state = proposal
+                    return True
+                return False
+            except EnCounterError as err:
+                errorCounter = errorCounter+1
+                print "EncounterError has occurred. As of now, {n} errors have occurred in a row.".format(n=errorCounter)
 
+
+#Soft absolute value used in smala MCMC
 alpha = 1.4
 def softabs(hessians):
     lam, Q = np.linalg.eig(-hessians)
     lam_twig = lam*1./np.tanh(alpha*lam)
     H_twig = np.dot(Q,np.dot(np.diag(lam_twig),Q.T))    
     return H_twig
-
+'''
+smala MCMC coupled with rebound.
+'''
 class Smala(Mcmc):
     def __init__(self, initial_state, obs):
         super(Smala,self).__init__(initial_state, obs)
-        self.epsilon = 0.17
+        self.epsilon = 0.18
 
     def generate_proposal(self):
         logp, logp_d, logp_dd = self.state.get_logp_d_dd(self.obs) 
@@ -128,7 +149,6 @@ class Smala(Mcmc):
             except np.linalg.linalg.LinAlgError as err:
                 errorCounter = errorCounter+1
                 print "Alert: {c} LinAlgError have occured in a row.".format(c=errorCounter)
-        print stateStar.logp-self.state.logp+q_t_ts-q_ts_t
         if np.exp(stateStar.logp-self.state.logp+q_t_ts-q_ts_t) > np.random.uniform():
             self.state = stateStar
             return True

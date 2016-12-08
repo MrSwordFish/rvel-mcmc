@@ -1,7 +1,13 @@
 import numpy as np
 import rebound
 import copy
+from datetime import datetime
+import matplotlib.pyplot as plt
 
+'''
+State class
+Stores the state of an MCMC and methods which can be used on it.
+'''
 class State(object):
 
     def __init__(self, planets, ignore_vars=[]):
@@ -9,6 +15,14 @@ class State(object):
         self.logp = None
         self.planets_vars = []
         self.Nvars = 0
+
+        self.coCount = 0
+        self.coll = False
+        self.planet1x = []
+        self.planet1y = []
+        self.planet2x = []
+        self.planet2y = []
+
         self.ignore_vars = ignore_vars
         for planet in planets:
             planet_vars = [x for x in planet.keys() if x not in ignore_vars]
@@ -19,19 +33,41 @@ class State(object):
     def setup_sim(self):
         sim = rebound.Simulation()
         sim.add(m=1.)
+        sim.exit_min_distance = 4.e-3
+        #sim.exit_min_distance = 1.e-6
         for planet in self.planets:
             sim.add(primary=sim.particles[0],**planet)
         sim.move_to_com()
         return sim
 
+    def check_ts(self, sim):
+        self.planet1x.append(sim.contents.particles[1].x)
+        self.planet1y.append(sim.contents.particles[1].y)
+        self.planet2x.append(sim.contents.particles[2].x)
+        self.planet2y.append(sim.contents.particles[2].y)
+           
+
     def get_rv(self, times):
         sim = self.setup_sim()
-        
         rv = np.zeros(len(times))
-        for i, t in enumerate(times):
-            sim.integrate(t)
-            rv[i] = sim.particles[0].vx
 
+        self.coll = False
+        self.planet1x = []
+        self.planet1y = []
+        self.planet2x = []
+        self.planet2y = []
+        for i, t in enumerate(times):
+            #This is used to check the position of a planet inbetween timesteps
+            #sim.post_timestep_modifications = self.check_ts
+            try:
+                sim.integrate(t)
+            except rebound.Encounter as e:
+                if(self.coCount % 200 == 1):
+                    print "Collisions! Current count: {c}. {t}".format(t=datetime.utcnow(),c=self.coCount)
+                self.coCount += 1
+                self.coll = True
+                break
+            rv[i] = sim.particles[0].vx
         return rv
 
     def get_rv_plotting(self, obs, Npoints=1000):
@@ -44,9 +80,9 @@ class State(object):
         chi2f = 0.
         chi2b = 0.
         for i, tf in enumerate(obs.tf):
-            chi2f += ((rvf[i]-obs.rvf[i])**2)/(obs.errorf[i]**2)
+            chi2f += ((rvf[i]-obs.rvf[i])**2.)/(obs.errorf[i]**2.)
         for i, tb in enumerate(obs.tb):
-            chi2b += ((rvb[i]-obs.rvb[i])**2)/(obs.errorb[i]**2)
+            chi2b += ((rvb[i]-obs.rvb[i])**2.)/(obs.errorb[i]**2.)
         return (chi2b+chi2f)/(obs.Npoints)
 
     def get_logp(self, obs):
@@ -57,12 +93,6 @@ class State(object):
         else:
             lnpri = 0.0
         return self.logp + lnpri
-    
-    def lnprior(theta):
-        m, a, h, k, l = theta
-        if (1e-7 < m < 0.1) and (1e-2 < a < 500.0) and ((h**2 + k**2) < 1.0) and (-2*np.pi < l < 2*np.pi):
-            return 0.0
-        return -np.inf
 
     def shift_params(self, vec):
         self.logp = None
@@ -127,7 +157,6 @@ class State(object):
                     return pindex+1, v
                 vi += 1
 
-
     def setup_sim_vars(self):
         sim = self.setup_sim()
         variations1 = []
@@ -161,7 +190,14 @@ class State(object):
         chi2_ddf = np.zeros((self.Nvars,self.Nvars))
         fac = obs.Npoints
         for i, tf in enumerate(obs.tf):
-            sim.integrate(tf)
+            try:
+                sim.integrate(tf)
+            except rebound.Encounter as e:
+                if(self.coCount % 50 == 1):
+                    print "Collisions! Current count: {c}. {t}".format(t=datetime.utcnow(),c=self.coCount)
+                self.coCount += 1
+                self.coll = True
+                break
             chi2f += (sim.particles[0].vx-obs.rvf[i])**2*1./(obs.errorf[i]**2 *fac)
             v2index = 0
             for vindex1 in range(self.Nvars):
@@ -172,9 +208,16 @@ class State(object):
                         chi2_ddf[vindex1][vindex2] +=  2. * variations2[v2index].particles[0].vx * (sim.particles[0].vx-obs.rvf[i])*1./(obs.errorf[i]**2 * fac) + 2. * variations1[vindex1].particles[0].vx * variations1[vindex2].particles[0].vx*1./(obs.errorf[i]**2 * fac)
                         v2index += 1
                         chi2_ddf[vindex2][vindex1] = chi2_ddf[vindex1][vindex2]
-
         for i, tb in enumerate(obs.tb):
-            sim.integrate(tb)
+            if(self.coll): break
+            try:
+                sim.integrate(tb)
+            except rebound.Encounter as e:
+                if(self.coCount % 10 == 1):
+                    print "Collisions! Current count: {c}. {t}".format(t=datetime.utcnow(),c=self.coCount)
+                self.coCount += 1
+                self.coll = True
+                break
             chi2b += (sim.particles[0].vx-obs.rvb[i])**2*1./(obs.errorb[0]**2 * fac)
             v2index = 0
             for vindex1 in range(self.Nvars):
@@ -185,7 +228,7 @@ class State(object):
                         chi2_ddb[vindex1][vindex2] +=  2. * variations2[v2index].particles[0].vx * (sim.particles[0].vx-obs.rvb[i])*1./(obs.errorb[i]**2 * fac) + 2. * variations1[vindex1].particles[0].vx * variations1[vindex2].particles[0].vx*1./(obs.errorb[i]**2 * fac)
                         v2index += 1
                         chi2_ddb[vindex2][vindex1] = chi2_ddb[vindex1][vindex2]
-
+        self.coll = False
         return chi2b+chi2f, chi2_db+chi2_df, chi2_ddb+chi2_ddf
 
     def get_logp_d_dd(self, obs):
