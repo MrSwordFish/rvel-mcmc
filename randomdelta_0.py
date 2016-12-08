@@ -9,8 +9,8 @@ import numpy as np
 import hashlib
 from datetime import datetime
 
-niter = 960*4
-nitersmala = 120
+niter = 960*2
+nitersmala = 30
 sigmaMaxRange=40
 np.random.seed(2016)
 print ("2016")
@@ -42,10 +42,10 @@ for i in range(7,sigmaMaxRange+1):
     actimes = driver.inLineSaveEmceeAcTimes('actimes_emcee_{h}'.format(h=h.hexdigest()),chain, niter, 32, [18,6], s)
     eff1 = driver.efficacy(niter, actimes, clocktimes)
     #Process SMALA stuff
-    driver.inLineSaveChains('chains_smala_{h2}'.format(h=h.hexdigest()),smala, chain2, chainlogp2, [20,12])
-    s2 = driver.inLineSaveResults('results_smala_{h2}'.format(h=h.hexdigest()),nitersmala, smala, chain2, initial_state, obs, 50, [20,6])
-    driver.inLineSaveCorners('corners_smala_{h2}'.format(h=h.hexdigest()),chain2, s2, initial_state)
-    actimes2 = driver.inLineSaveAcTimes('actimes_smala_{h2}'.format(h=h.hexdigest()),chain2, [18,12], s2)
+    driver.inLineSaveChains('chains_smala_{h2}'.format(h2=h2.hexdigest()),smala, chain2, chainlogp2, [20,12])
+    s2 = driver.inLineSaveResults('results_smala_{h2}'.format(h2=h2.hexdigest()),nitersmala, smala, chain2, initial_state, obs, 50, [20,6])
+    driver.inLineSaveCorners('corners_smala_{h2}'.format(h2=h2.hexdigest()),chain2, s2, initial_state)
+    actimes2 = driver.inLineSaveAcTimes('actimes_smala_{h2}'.format(h2=h2.hexdigest()),chain2, [18,12], s2)
     eff2 = driver.efficacy(nitersmala, actimes2, clocktimes2)
     #Save data for plotting later
     storage.append(np.asarray([Nvec,q,actimes,clocktimes,eff1,actimes2,clocktimes2,eff2]))
