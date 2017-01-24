@@ -262,11 +262,27 @@ def efficacy(Niter, AC, clockTimes):
     dt = (clockTimes[len(clockTimes)-1]-clockTimes[1]).total_seconds()
     return (Niter/(dt*np.amax(AC)))
 
-def loadData(name, hashh):
-    return np.load('{n}_{h}'.format(n=name,h=hashh.hexdigest()))
+def loadData(name, h):
+    return np.load('{n}_{h}'.format(n=name,h=h.hexdigest()))
 
-def saveData(dat, name, hashh):
-    np.save('{n}_{h}'.format(n=name,h=hashh.hexdigest()), dat)
+def saveData(dat, name, h):
+    np.save('{n}_{h}'.format(n=name,h=h.hexdigest()), dat)
+
+def saveAuxSmala(h, label, Niter, eps, alpha):
+    with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
+        text_file.write(str(true_state.planets))
+        text_file.write("\n {l}, Niter={n}, eps={e}, Alpha={a}".format(l=label, n=Niter, e=eps, a=alpha))
+
+def saveAuxEmcee(h, label, Niter, Nwalkers, scal):
+    with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
+        text_file.write(str(true_state.planets))
+        text_file.write("\n {l}, Niter={n}, Nwalkers={s}, Scale={t}".format(l=label, n=Niter, s=Nwalkers, t=scal))
+
+def saveAuxMH(h, label, Niter, scal, step):
+    with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
+        text_file.write(str(true_state.planets))
+        text_file.write("\n {l}, Niter={n}, Scale={s}, Stepsize={t}".format(l=label, n=Niter, s=scal, t=step))
+
 
 
 
