@@ -87,7 +87,6 @@ def createEns(label, Niter, true_state, obs, Nwalkers, scal):
             clocktimes.append(datetime.utcnow())
     clocktimes.append(datetime.utcnow())
     print("Error(s): {e}".format(e=ens.totalErrorCount))
-    print "In total, there has been {n} collisions.".format(n=ens.state.coCount)
     print("Acceptance rate: %.3f%%"%(float(Niter/Nwalkers)/tries*100))
     h = hashlib.md5()
     h.update(str(true_state.planets))
@@ -123,7 +122,6 @@ def createSMALA(label, Niter, true_state, obs, eps, alpha):
             clocktimes.append(datetime.utcnow())
     clocktimes.append(datetime.utcnow())
     print("Acceptance rate: %.2f%%"%(float(Niter)/tries*100))
-    print "In total, there has been {n} collisions.".format(n=smala.state.coCount)
     h = hashlib.md5()
     h.update(str(true_state.planets))
     h.update(label)
@@ -263,25 +261,25 @@ def efficacy(Niter, AC, clockTimes):
     return (Niter/(dt*np.amax(AC)))
 
 def loadData(name, h):
-    return np.load('{n}_{h}'.format(n=name,h=h.hexdigest()))
+    return np.load('{n}_{h}.npy'.format(n=name,h=h.hexdigest()))
 
 def saveData(dat, name, h):
     np.save('{n}_{h}'.format(n=name,h=h.hexdigest()), dat)
 
-def saveAuxSmala(h, label, Niter, eps, alpha):
+def saveAuxSmala(h, true_state, label, Niter, eps, alpha):
     with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
-        text_file.write(str(true_state.planets))
-        text_file.write("\n {l}, Niter={n}, eps={e}, Alpha={a}".format(l=label, n=Niter, e=eps, a=alpha))
+        text_file.write('initial = '+ str(true_state.planets) )
+        text_file.write("\nlabel, Niter, Eps, Alpha = '{l}', {n}, {e}, {a}".format(l=label, n=Niter, e=eps, a=alpha))
 
-def saveAuxEmcee(h, label, Niter, Nwalkers, scal):
+def saveAuxEmcee(h, true_state, label, Niter, Nwalkers, scal):
     with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
-        text_file.write(str(true_state.planets))
-        text_file.write("\n {l}, Niter={n}, Nwalkers={s}, Scale={t}".format(l=label, n=Niter, s=Nwalkers, t=scal))
+        text_file.write('initial = '+ str(true_state.planets) )
+        text_file.write("\nlabel, Niter, Nwalkers, Scale = '{l}', {n}, {s}, {t}".format(l=label, n=Niter, s=Nwalkers, t=scal))
 
-def saveAuxMH(h, label, Niter, scal, step):
+def saveAuxMH(h, true_state, label, Niter, scal, step):
     with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
-        text_file.write(str(true_state.planets))
-        text_file.write("\n {l}, Niter={n}, Scale={s}, Stepsize={t}".format(l=label, n=Niter, s=scal, t=step))
+        text_file.write('initial = '+ str(true_state.planets) )
+        text_file.write("\nlabel, Niter, Scale, Stepsize = '{l}', {n}, {s}, {t}".format(l=label, n=Niter, s=scal, t=step))
 
 
 
