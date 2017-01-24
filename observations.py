@@ -18,7 +18,7 @@ class Observation:
 class FakeObservation(Observation):
     def __init__(self, state, Npoints=30, error=0., errorVar=0., tmax=1.5):
         """
-        Generates fake observations. 
+            Generates fake observations. 
         """
         self.Npoints = Npoints
         self.error = error
@@ -52,7 +52,7 @@ class FakeObservation(Observation):
 class Observation_FromFile(Observation):
     def __init__(self, filename='yourfile.txt', Npoints=30):
         """
-        Load observations from a .vels file. 
+            Load observations from a .vels file. 
         """
         readtimes = np.genfromtxt(filename,usecols=(0),delimiter=' ',dtype=None)
         readrvs = np.genfromtxt(filename,usecols=(1),delimiter=' ',dtype=None)

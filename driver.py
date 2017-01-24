@@ -9,7 +9,13 @@ import numpy as np
 import hashlib
 from datetime import datetime
 
-#Two utility functions meant fro the driver class
+################################################################################################
+#This python file differs from the others in that it does not contain any classes.
+#This is a module which facilitates the use of the mcmc classes. 
+#As such, it is structured differently.
+################################################################################################
+
+#Two utility functions meant for the driver class
 def AutoCorrelation(x):
     x = np.asarray(x)
     y = x-x.mean()
@@ -18,6 +24,7 @@ def AutoCorrelation(x):
     result /= result[0]
     return result
 
+#Usefull in certain troubleshooting situations.
 def WritingToLog(obj, name, logging):
     if(logging):
         with open("log{r}".format(r=nameame),"a") as a:
@@ -27,7 +34,103 @@ def WritingToLog(obj, name, logging):
     else:
         a=None
 
+
 #functions to be called by notebook/user
+def createMH(label, Niter, true_state, obs, scal, step):
+    mh = mcmc.Mh(true_state,obs)
+    mh.set_scales(scal)
+    mh.step_size = step
+    chain = np.zeros((0,mh.state.Nvars))
+    chainlogp = np.zeros(0)
+    tries = 0
+    clocktimes = []
+    clocktimes.append(datetime.utcnow())
+    chainlogp = np.append(chainlogp,true_state.get_logp(obs))
+    chain = np.append(chain,[true_state.get_params()],axis=0)
+    for i in range(Niter):
+        while mh.step()==False:
+            chainlogp = np.append(chainlogp,mh.state.get_logp(obs))
+            chain = np.append(chain,[mh.state.get_params()],axis=0)
+            tries += 1
+        tries += 1
+        chainlogp = np.append(chainlogp,mh.state.get_logp(obs))
+        chain = np.append(chain,[mh.state.get_params()],axis=0)
+        if(i % 150 == 1):
+            print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
+            clocktimes.append(datetime.utcnow())
+    clocktimes.append(datetime.utcnow())
+    print("Acceptance rate: %.3f%%"%(float(Niter)/tries*100))
+    h = hashlib.md5()
+    h.update(str(true_state.planets))
+    h.update(label)
+    print "The id of the simulation is: {r}".format(r=h.hexdigest())
+    print "The end time of the simulation is {r}".format(r=datetime.utcnow())
+    return mh, chain, chainlogp, clocktimes, h
+
+def createEns(label, Niter, true_state, obs, Nwalkers, scal):
+    ens = mcmc.Ensemble(true_state,obs,scales=scal,nwalkers=Nwalkers)
+    listchain = np.zeros((Nwalkers,ens.state.Nvars,0))
+    listchainlogp = np.zeros((Nwalkers,0))
+    tries=0
+    clocktimes = []
+    clocktimes.append(datetime.utcnow())
+    for i in range(int(Niter/Nwalkers)):
+        while ens.step()==False:
+            listchainlogp = np.append(listchainlogp, np.reshape(ens.lnprob, (Nwalkers, 1)), axis=1)
+            listchain = np.append(listchain, np.reshape(ens.states, (Nwalkers,ens.state.Nvars,1)),axis=2)
+            tries += 1
+        listchainlogp = np.append(listchainlogp, np.reshape(ens.lnprob, (Nwalkers, 1)), axis=1)
+        listchain = np.append(listchain, np.reshape(ens.states, (Nwalkers,ens.state.Nvars,1)),axis=2)
+        tries += 1
+        if (i%200==1): 
+            print ("Progress: {p:.5}%, time: {t}".format(p=100.*(float(i)/(Niter/Nwalkers)),t=datetime.utcnow()))
+            clocktimes.append(datetime.utcnow())
+    clocktimes.append(datetime.utcnow())
+    print("Error(s): {e}".format(e=ens.totalErrorCount))
+    print "In total, there has been {n} collisions.".format(n=ens.state.coCount)
+    print("Acceptance rate: %.3f%%"%(float(Niter/Nwalkers)/tries*100))
+    h = hashlib.md5()
+    h.update(str(true_state.planets))
+    h.update(label)
+    chain = np.zeros((ens.state.Nvars,0))
+    chainlogp = np.zeros(0)
+    for i in range(Nwalkers):
+        chain = np.append(chain, listchain[i], axis=1)
+        chainlogp = np.append(chainlogp, listchainlogp[i])
+    print "The id of the simulation is: {r}".format(r=h.hexdigest())
+    print "The end time of the simulation is {r}".format(r=datetime.utcnow())
+    return ens, np.transpose(chain), chainlogp, clocktimes, h
+
+def createSMALA(label, Niter, true_state, obs, eps, alpha):
+    smala = mcmc.Smala(true_state,obs, eps, alpha)
+    chain = np.zeros((0,smala.state.Nvars))
+    chainlogp = np.zeros(0)
+    tries = 0
+    clocktimes = []
+    clocktimes.append(datetime.utcnow())
+    chainlogp = np.append(chainlogp,true_state.get_logp(obs))
+    chain = np.append(chain,[true_state.get_params()],axis=0)
+    for i in range(Niter):
+        while smala.step()==False:
+            chainlogp = np.append(chainlogp,smala.state.get_logp(obs))
+            chain = np.append(chain,[smala.state.get_params()],axis=0)
+            tries += 1
+        tries += 1
+        chainlogp = np.append(chainlogp,smala.state.get_logp(obs))
+        chain = np.append(chain,[smala.state.get_params()],axis=0)
+        if(i % 40 == 1):
+            print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
+            clocktimes.append(datetime.utcnow())
+    clocktimes.append(datetime.utcnow())
+    print("Acceptance rate: %.2f%%"%(float(Niter)/tries*100))
+    print "In total, there has been {n} collisions.".format(n=smala.state.coCount)
+    h = hashlib.md5()
+    h.update(str(true_state.planets))
+    h.update(label)
+    print "The id of the simulation is: {r}".format(r=h.hexdigest())
+    print "The end time of the simulation is {r}".format(r=datetime.utcnow())
+    return smala, chain, chainlogp, clocktimes, h
+
 def CreateObs(state, npoint, err, errVar, t):
     obs = observations.FakeObservation(state, Npoints=npoint, error=err, errorVar=errVar, tmax=(t))
     return obs
@@ -51,97 +154,6 @@ def inLinePlotObs(true_state, obs, size):
     frame2.set_xlabel("$Time$", fontsize=28)      
     plt.errorbar(obs.t, true_state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
     plt.grid()
-
-def createMH(label, Niter, true_state, obs, scal, step):
-    mh = mcmc.Mh(true_state,obs)
-    mh.set_scales(scal)
-    mh.step_size = step
-    chain = np.zeros((Niter,mh.state.Nvars))
-    chainlogp = np.zeros(Niter)
-    tries = 0
-    clocktimes = []
-    clocktimes.append(datetime.utcnow())
-    for i in range(Niter):
-        tries += mh.step_force()
-        chain[i] = mh.state.get_params()
-        chainlogp[i] = mh.state.logp
-        if(i % 150 == 1):
-            print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
-            clocktimes.append(datetime.utcnow())
-    clocktimes.append(datetime.utcnow())
-    print("Acceptance rate: %.3f%%"%(float(Niter)/tries*100))
-    print("Saving data to disk")
-    h = hashlib.md5()
-    h.update(str(true_state.planets))
-    h.update(label)
-    print (h.hexdigest())
-    with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
-        text_file.write(str(true_state.planets))
-        text_file.write("\n {l}, Niter={n}, Scale={s}, Stepsize={t}".format(l=label, n=Niter, s=scal, t=step))
-    np.save('chain_MH_{h}'.format(h=h.hexdigest()), chain)
-    np.save('chainlogp_MH_{h}'.format(h=h.hexdigest()), chainlogp)
-    np.save('clocktimes_MH_{h}'.format(h=h.hexdigest()), clocktimes)
-    return mh, chain, chainlogp, clocktimes
-
-def createEns(label, Niter, true_state, obs, Nwalkers, scal):
-    ens = mcmc.Ensemble(true_state,obs,scales=scal,nwalkers=Nwalkers)
-    chain = np.zeros((Niter,ens.state.Nvars))
-    chainlogp = np.zeros(Niter)
-    clocktimes = []
-    clocktimes.append(datetime.utcnow())
-    for i in range(Niter/Nwalkers):
-        ens.step_force()
-        for j in range(Nwalkers):
-            chain[j*Niter/Nwalkers+i] = ens.states[j]
-            chainlogp[j*Niter/Nwalkers+i] = ens.lnprob[j]
-        if (i%200==1): 
-            print ("Progress: {p:.5}%, time: {t}".format(p=100.*(float(i)/(Niter/Nwalkers)),t=datetime.utcnow()))
-            clocktimes.append(datetime.utcnow())
-    clocktimes.append(datetime.utcnow())
-    print("Error(s): {e}".format(e=ens.totalErrorCount))
-    print "In total, there has been {n} collisions.".format(n=ens.state.coCount)
-    print("Saving data to disk")
-    h = hashlib.md5()
-    h.update(str(true_state.planets))
-    h.update(label)
-    print (h.hexdigest())
-    with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
-        text_file.write(str(true_state.planets))
-        text_file.write("\n {l}, Niter={n}, Nwalkers={s}, Scale={t}".format(l=label, n=Niter, s=Nwalkers, t=scal))
-    np.save('chain_emcee_{h}'.format(h=h.hexdigest()), chain)
-    np.save('chainlogp_emcee_{h}'.format(h=h.hexdigest()), chainlogp)
-    np.save('clocktimes_emcee_{h}'.format(h=h.hexdigest()), clocktimes)
-    return ens, chain, chainlogp, clocktimes
-
-def createSMALA(label, Niter, true_state, obs):
-    smala = mcmc.Smala(true_state,obs)
-    chain = np.zeros((Niter,smala.state.Nvars))
-    chainlogp = np.zeros(Niter)
-    tries = 0
-    clocktimes = []
-    clocktimes.append(datetime.utcnow())
-    for i in range(Niter):
-        tries += smala.step_force()
-        chain[i] = smala.state.get_params()
-        chainlogp[i] = smala.state.logp
-        if(i % 40 == 1):
-            print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
-            clocktimes.append(datetime.utcnow())
-    clocktimes.append(datetime.utcnow())
-    print("Acceptance rate: %.2f%%"%(float(Niter)/tries*100))
-    print "In total, there has been {n} collisions.".format(n=smala.state.coCount)
-    print("Saving data to disk")
-    h = hashlib.md5()
-    h.update(str(true_state.planets))
-    h.update(label)
-    print (h.hexdigest())
-    with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
-        text_file.write(str(true_state.planets))
-        text_file.write("\n {l}, Niter={n}".format(l=label, n=Niter))
-    np.save('chain_smala_{h}'.format(h=h.hexdigest()), chain)
-    np.save('chainlogp_smala_{h}'.format(h=h.hexdigest()), chainlogp)
-    np.save('clocktimes_smala_{h}'.format(h=h.hexdigest()), clocktimes)
-    return smala, chain, chainlogp, clocktimes
 
 def inLinePlotChains(mcmc, chain, chainlogp, size):
     fig = plt.figure(figsize=(size[0],size[1]))
@@ -250,11 +262,18 @@ def efficacy(Niter, AC, clockTimes):
     dt = (clockTimes[len(clockTimes)-1]-clockTimes[1]).total_seconds()
     return (Niter/(dt*np.amax(AC)))
 
-#
-#Alternate version of the functions above except the plots are SAVED to the disk in ./mcmcplots.
-#
-#
+def loadData(name, hashh):
+    return np.load('{n}_{h}'.format(n=name,h=hashh.hexdigest()))
 
+def saveData(dat, name, hashh):
+    np.save('{n}_{h}'.format(n=name,h=hashh.hexdigest()), dat)
+
+
+
+
+################################################################################################
+#Alternate version of the functions above except the plots are SAVED to the disk in ./mcmcplots.
+################################################################################################
 def inLineSaveChains(name, mcmc, chain, chainlogp, size):
     fig = plt.figure(figsize=(size[0],size[1]))
     for i in range(mcmc.state.Nvars):
@@ -282,7 +301,7 @@ def inLineSaveResults(name, Niter, mcmc, chain, true_state, obs, Ntrails, size):
         s = mcmc.state.deepcopy()
         s.set_params(chain[c])
         averageRandomChain += chain[c]
-        ax.plot(*s.get_rv_plotting(obs), alpha=0.12, color="darkolivegreen")
+        ax.plot(*s.get_rv_plotting(obs), alpha=0.14, color="darkolivegreen")
     averageRandomState = mcmc.state.deepcopy()
     averageRandomState.set_params(averageRandomChain/Ntrails)
     ax.plot(*true_state.get_rv_plotting(obs), color="blue")
