@@ -29,11 +29,11 @@ class FakeObservation(Observation):
             sim.add(primary=sim.particles[0],**planet)
         sim.move_to_com()
         
-        self.tf = np.sort(np.random.uniform(0.,tmax/2.,self.Npoints/2.))
+        self.tf = np.append([0],np.sort(np.random.uniform(0.,tmax/2.,self.Npoints/2.)))
         self.tb = np.sort(np.random.uniform(0.,-tmax/2.,self.Npoints/2.))
-        self.rvf = np.zeros(self.Npoints/2.)
+        self.rvf = np.zeros(self.Npoints/2. + 1)
         self.rvb = np.zeros(self.Npoints/2.)
-        self.errorf = np.zeros(self.Npoints/2.)
+        self.errorf = np.zeros(self.Npoints/2. + 1)
         self.errorb = np.zeros(self.Npoints/2.)
         for i, tf in enumerate(self.tf):
             sim.integrate(tf)
@@ -52,11 +52,11 @@ class FakeObservation(Observation):
 class Observation_FromFile(Observation):
     def __init__(self, filename='yourfile.txt', Npoints=30):
         """
-            Load observations from a .vels file. 
+            Load observations from a .vels or .txt file. 
         """
-        readtimes = np.genfromtxt(filename,usecols=(0),delimiter=' ',dtype=None)
-        readrvs = np.genfromtxt(filename,usecols=(1),delimiter=' ',dtype=None)
-        readerrors = np.genfromtxt(filename,usecols=(2),delimiter=' ',dtype=None)
+        readtimes = np.genfromtxt(filename,usecols=(0),delimiter=' ',dtype='d')
+        readrvs = np.genfromtxt(filename,usecols=(1),delimiter=' ',dtype='d')
+        readerrors = np.genfromtxt(filename,usecols=(2),delimiter=' ',dtype='d')
         readb, readf = np.array_split(readtimes*0.01720,2)
         shift = readb[len(readb)-1]
         self.Npoints = Npoints

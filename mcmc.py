@@ -125,6 +125,7 @@ class Smala(Mcmc):
         super(Smala,self).__init__(initial_state, obs)
         self.epsilon = eps
         self.alpha = alp
+        self.print_info_every = 0
 
     '''
     Soft absolute metric, makes sure the eigenvalues are positive.

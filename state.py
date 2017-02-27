@@ -5,7 +5,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 class State(object):
-    def __init__(self, planets, ignore_vars=[]):
+    def __init__(self, planets, ignore_vars=[], ignore_params=None):
         self.planets = planets
         self.logp = None
         self.logp_d = None
@@ -21,8 +21,12 @@ class State(object):
         self.planet2y = []
 
         self.ignore_vars = ignore_vars
-        for planet in planets:
-            planet_vars = [x for x in planet.keys() if x not in ignore_vars]
+        self.ignore_params = ignore_params
+        for p, planet in enumerate(planets):
+            planet_vars = [x for x in planet.keys() if (x not in ignore_vars)]
+            if(ignore_params != None):
+                for o in range(len(ignore_params[p])):
+                    planet_vars.remove(ignore_params[p][o])
             self.planets_vars.append(planet_vars)
             self.Nvars += len(planet_vars)
 
@@ -125,8 +129,13 @@ class State(object):
         for i, planet in enumerate(self.planets):
             for k in planet.keys():
                 if k not in self.ignore_vars:
-                    self.planets[i][k] += vec[varindex]
-                    varindex += 1
+                    if(self.ignore_params != None):
+                        if (k not in self.ignore_vars) and (k not in self.ignore_params[i]):
+                            self.planets[i][k] += vec[varindex]
+                            varindex += 1
+                    elif(k not in self.ignore_vars):
+                        self.planets[i][k] += vec[varindex]
+                        varindex += 1
    
     '''
     Returns the parameters of a state.
@@ -136,7 +145,11 @@ class State(object):
         parindex = 0
         for i, planet in enumerate(self.planets):
             for k in planet.keys():
-                if k not in self.ignore_vars:
+                if(self.ignore_params != None):
+                    if (k not in self.ignore_vars) and (k not in self.ignore_params[i]):
+                        params[parindex] = self.planets[i][k]
+                        parindex += 1
+                elif(k not in self.ignore_vars):
                     params[parindex] = self.planets[i][k]
                     parindex += 1
         return params
@@ -151,7 +164,11 @@ class State(object):
         varindex = 0
         for i, planet in enumerate(self.planets):
             for k in planet.keys():
-                if k not in self.ignore_vars:
+                if(self.ignore_params != None):
+                    if (k not in self.ignore_vars) and (k not in self.ignore_params[i]):
+                        self.planets[i][k] = vec[varindex]
+                        varindex += 1
+                elif(k not in self.ignore_vars):
                     self.planets[i][k] = vec[varindex]
                     varindex += 1
     
@@ -163,7 +180,11 @@ class State(object):
         parindex = 0
         for i, planet in enumerate(self.planets):
             for k in planet.keys():
-                if k not in self.ignore_vars:
+                if(self.ignore_params != None):
+                    if (k not in self.ignore_vars) and (k not in self.ignore_params[i]):
+                        keys[parindex] = "$%s_%d$"%(k,i)
+                        parindex += 1
+                elif(k not in self.ignore_vars):
                     keys[parindex] = "$%s_%d$"%(k,i)
                     parindex += 1
         return keys
@@ -176,7 +197,11 @@ class State(object):
         parindex = 0
         for i, planet in enumerate(self.planets):
             for k in planet.keys():
-                if k not in self.ignore_vars:
+                if(self.ignore_params != None):
+                    if (k not in self.ignore_vars) and (k not in self.ignore_params[i]):
+                        keys[parindex] = k
+                        parindex += 1
+                elif(k not in self.ignore_vars):
                     keys[parindex] = k
                     parindex += 1
         return keys
@@ -185,7 +210,7 @@ class State(object):
     Returns a deepcopy of current state.
     '''
     def deepcopy(self):
-        return State(copy.deepcopy(self.planets), copy.deepcopy(self.ignore_vars))
+        return State(copy.deepcopy(self.planets), copy.deepcopy(self.ignore_vars), ignore_params=copy.deepcopy(self.ignore_params))
 
     '''
     Helps manage the variational index in the simulation setup.

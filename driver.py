@@ -10,10 +10,22 @@ import hashlib
 from datetime import datetime
 
 ################################################################################################
-#This python file differs from the others in that it does not contain any classes.
 #This is a module which facilitates the use of the mcmc classes. 
 #As such, it is structured differently.
 ################################################################################################
+
+class McmcBundle(object):
+    def __init__(self, mcmc, chain, chainlogp, clocktimes, obs, Niter, initial_state, is_emcee = False, Nwalkers = 32):
+        self.mcmc = mcmc
+        self.mcmc_is_emcee = is_emcee
+        self.mcmc_Nwalkers = Nwalkers
+        self.mcmc_chain = chain
+        self.mcmc_chainlogp = chainlogp
+        self.mcmc_clocktimes = clocktimes
+        self.mcmc_obs = obs
+        self.mcmc_Niter = Niter
+        self.mcmc_initial_state = initial_state
+
 
 #Two utility functions meant for the driver class
 def AutoCorrelation(x):
@@ -65,7 +77,8 @@ def createMH(label, Niter, true_state, obs, scal, step):
     h.update(label)
     print "The id of the simulation is: {r}".format(r=h.hexdigest())
     print "The end time of the simulation is {r}".format(r=datetime.utcnow())
-    return mh, chain, chainlogp, clocktimes, h
+    bundle = McmcBundle(mh, chain, chainlogp, clocktimes, obs, Niter, true_state)
+    return bundle, h
 
 def createEns(label, Niter, true_state, obs, Nwalkers, scal):
     ens = mcmc.Ensemble(true_state,obs,scales=scal,nwalkers=Nwalkers)
@@ -98,10 +111,12 @@ def createEns(label, Niter, true_state, obs, Nwalkers, scal):
         chainlogp = np.append(chainlogp, listchainlogp[i])
     print "The id of the simulation is: {r}".format(r=h.hexdigest())
     print "The end time of the simulation is {r}".format(r=datetime.utcnow())
-    return ens, np.transpose(chain), chainlogp, clocktimes, h
+    bundle = McmcBundle(ens, np.transpose(chain), chainlogp, clocktimes, obs, Niter, true_state, is_emcee=True, Nwalkers=Nwalkers)
+    return bundle, h
 
-def createSMALA(label, Niter, true_state, obs, eps, alpha):
+def createSMALA(label, Niter, true_state, obs, eps, alpha, printing_every = 40):
     smala = mcmc.Smala(true_state,obs, eps, alpha)
+    smala.print_info_every = printing_every
     chain = np.zeros((0,smala.state.Nvars))
     chainlogp = np.zeros(0)
     tries = 0
@@ -117,7 +132,7 @@ def createSMALA(label, Niter, true_state, obs, eps, alpha):
         tries += 1
         chainlogp = np.append(chainlogp,smala.state.get_logp(obs))
         chain = np.append(chain,[smala.state.get_params()],axis=0)
-        if(i % 40 == 1):
+        if(i % smala.print_info_every == 1):
             print ("Progress: {p:.5}%, {n} tries have been made, time: {t}".format(p=100.*(float(i)/Niter),t=datetime.utcnow(),n=tries))
             clocktimes.append(datetime.utcnow())
     clocktimes.append(datetime.utcnow())
@@ -127,15 +142,55 @@ def createSMALA(label, Niter, true_state, obs, eps, alpha):
     h.update(label)
     print "The id of the simulation is: {r}".format(r=h.hexdigest())
     print "The end time of the simulation is {r}".format(r=datetime.utcnow())
-    return smala, chain, chainlogp, clocktimes, h
+    bundle = McmcBundle(smala, chain, chainlogp, clocktimes, obs, Niter, true_state)
+    return bundle, h
 
-def CreateObs(state, npoint, err, errVar, t):
+def preEpsSMALA(true_state, obs, eps, alpha, Niter):
+    smala = mcmc.Smala(true_state,obs, eps, alpha)
+    print "Trying out eps = {e}".format(e = eps)
+    tries = 0
+    for i in range(Niter):
+        while smala.step()==False:
+            tries += 1
+        tries += 1
+    print "Acc. Rate was {a}".format(a=(float(Niter)/tries))
+    if((0.52<=(float(Niter)/tries)) and (0.68>=(float(Niter)/tries))):
+        return eps
+    elif(0.52>(float(Niter)/tries)):
+        mod = 0
+        while(mod<=0):
+            mod = np.random.normal(loc=0.065, scale=0.025)*8.*np.abs((float(Niter)/tries)-0.6)
+        return preEpsSMALA(true_state, obs, eps-mod, alpha, Niter)
+    elif(0.68<(float(Niter)/tries)):
+        mod = 0
+        while(mod<=0):
+            mod = np.random.normal(loc=0.065, scale=0.025)*8.*np.abs((float(Niter)/tries)-0.6)
+        return preEpsSMALA(true_state, obs, eps+mod, alpha, Niter)
+
+def createALSMALA():
+    pass
+
+#Idea: PCGSMALA
+def createPCGSMALA():
+    pass
+
+
+def createObs(state, npoint, err, errVar, t):
     obs = observations.FakeObservation(state, Npoints=npoint, error=err, errorVar=errVar, tmax=(t))
     return obs
 
 def ReadObs(filen):
     obs = observations.Observation_FromFile(filename=filen, Npoints=100)
     return obs
+
+def saveObs(obs, true_state, label):
+    col1 = obs.t/1.720e-2
+    col2 = obs.rv/3.355e-5
+    col3 = obs.err/3.355e-5
+    h = hashlib.md5()
+    h.update(str(true_state.planets))
+    h.update(label)
+    np.savetxt('obs_{ha}.vels'.format(ha=h.hexdigest()), np.c_[col1, col2, col2])
 
 def inLinePlotObs(true_state, obs, size):
     fig = plt.figure(figsize=(size[0],size[1]))
@@ -153,8 +208,9 @@ def inLinePlotObs(true_state, obs, size):
     plt.errorbar(obs.t, true_state.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
     plt.grid()
 
-def inLinePlotChains(mcmc, chain, chainlogp, size):
+def inLinePlotChains(bundle, size, name='Name_left_empty', save=False):
     fig = plt.figure(figsize=(size[0],size[1]))
+    mcmc, chain, chainlogp = bundle.mcmc, bundle.mcmc_chain, bundle.mcmc_chainlogp
     for i in range(mcmc.state.Nvars):
         ax = plt.subplot(mcmc.state.Nvars+1,1,1+i)
         ax.set_ylabel(mcmc.state.get_keys()[i])
@@ -168,13 +224,20 @@ def inLinePlotChains(mcmc, chain, chainlogp, size):
     ax.yaxis.label.set_size(28)
     ax.tick_params(axis='both', labelsize=18)
     ax.locator_params(axis='y', nbins=3)
-    ax.plot(chainlogp)    
+    ax.plot(chainlogp)
+    if(save):
+        plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
+        plt.close('all')
 
-def inLinePlotResults(Niter, mcmc, chain, true_state, obs, Ntrails, size):
+
+def inLinePlotResults(bundle, Ntrails, size, name='Name_left_empty', save=False):
+    if(bundle.mcmc_is_emcee):
+        pass
+    Niter, mcmc, chain, true_state, obs = bundle.mcmc_Niter, bundle.mcmc, bundle.mcmc_chain, bundle.mcmc_initial_state, bundle.mcmc_obs
     fig = plt.figure(figsize=(size[0],size[1]))
     ax = plt.subplot(111)
     averageRandomChain = np.zeros(mcmc.state.Nvars)
-    for c in np.random.randint(Niter/4.,Niter,size=Ntrails):
+    for c in np.random.randint(Niter/5.,Niter,size=Ntrails):
         s = mcmc.state.deepcopy()
         s.set_params(chain[c])
         averageRandomChain += chain[c]
@@ -205,33 +268,63 @@ def inLinePlotResults(Niter, mcmc, chain, true_state, obs, Ntrails, size):
     ax3.set_ylabel("Residual RV")    
     plt.errorbar(obs.t, averageRandomState.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
     plt.grid()
-    return s
+    if(save):
+        plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
+        plt.close('all')
+
 
 #disable this function for now since installing corners on scinet is annoying, this is the fastest way to not do this.
-def inLinePlotCorners(chain, somestate, true_state):
-#    figure = corner.corner(chain, labels=somestate.get_keys(), plot_contours=False, truths=true_state.get_params(),label_kwargs={"fontsize":33},max_n_ticks=4)
+def inLinePlotCorners(bundle, name='Name_left_empty', save=False):
+    chain, mcmc, true_state = bundle.mcmc_chain, bundle.mcmc, bundle.mcmc_initial_state
+    somestate = mcmc.state.deepcopy()
+    #figure = corner.corner(chain, labels=somestate.get_keys(), plot_contours=False, truths=true_state.get_params(),label_kwargs={"fontsize":33},max_n_ticks=4)
+    #plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
+    #plt.close('all')
     pass
 
-def inLinePlotAcTimes(chain, size, somestate):
+def inLinePlotAcTimes(bundle, size, name='Name_left_empty', save=False): 
+    chain, mcmc = bundle.mcmc_chain, bundle.mcmc
+    somestate = mcmc.state.deepcopy()
     actimes = np.zeros(somestate.Nvars)
     fig = plt.figure(figsize=(size[0],size[1]))
+    fig.suptitle('Autocorelation', fontsize=12)
     for i in range(somestate.Nvars):
-        fig.suptitle('Autocorelation', fontsize=12)
         ax = plt.subplot(somestate.Nvars+1,1,1+i)
         ax.set_ylabel(somestate.get_keys()[i])
-        r = AutoCorrelation(chain[:,i])
-        ax.plot(r)
         ax.yaxis.label.set_size(28)
         ax.tick_params(axis='both', labelsize=13)
         ax.locator_params(axis='y', nbins=3)
-        for j in range(len(r)):
-            if(r[j] <0.5):
-                print "AC time {t}".format(t=j)
-                actimes[i] = j
-                break
+        if(bundle.mcmc_is_emcee):
+            Nwalkers = bundle.mcmc_Nwalkers
+            Niter = bundle.mcmc_Niter
+            temp = np.zeros(Niter/Nwalkers)
+            x = 0
+            for k in range(Nwalkers):
+                for p in range(Niter/Nwalkers):
+                    temp[p] = chain[(Niter/Nwalkers)*k+p,i]
+                y = AutoCorrelation(temp)
+                ax.plot(y, alpha=0.18, color="darkolivegreen")
+                for j in range(len(y)):
+                    if(y[j] <0.5):
+                        actimes[i] += j
+                        break
+            actimes[i] /= Nwalkers
+        else:
+            r = AutoCorrelation(chain[:,i])
+            ax.plot(r)
+            for j in range(len(r)):
+                if(r[j] <0.5):
+                    actimes[i] = j
+                    break
+        print "AC time {t}".format(t=actimes[i])
+    if(save):
+        plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
+        plt.close('all')
     return actimes
 
-def inLinePlotEmceeAcTimes(chain, Niter, Nwalkers, size, somestate):
+def inLinePlotEmceeAcTimes(bundle, size):
+    chain, Niter, Nwalkers, mcmc = bundle.mcmc_chain, bundle.mcmc_Niter, bundle.mcmc_Nwalkers, bundle.mcmc
+    somestate = mcmc.state.deepcopy()
     actimes = np.zeros(somestate.Nvars)
     fig = plt.figure(figsize=(size[0],size[1]))
     fig.suptitle('Autocorelation', fontsize=12)
@@ -280,123 +373,3 @@ def saveAuxMH(h, true_state, label, Niter, scal, step):
     with open('aux_{h}'.format(h=h.hexdigest()), "w") as text_file:
         text_file.write('initial = '+ str(true_state.planets) )
         text_file.write("\nlabel, Niter, Scale, Stepsize = '{l}', {n}, {s}, {t}".format(l=label, n=Niter, s=scal, t=step))
-
-
-
-
-
-################################################################################################
-#Alternate version of the functions above except the plots are SAVED to the disk in ./mcmcplots.
-################################################################################################
-def inLineSaveChains(name, mcmc, chain, chainlogp, size):
-    fig = plt.figure(figsize=(size[0],size[1]))
-    for i in range(mcmc.state.Nvars):
-        ax = plt.subplot(mcmc.state.Nvars+1,1,1+i)
-        ax.set_ylabel(mcmc.state.get_keys()[i])
-        ax.tick_params(axis='x', labelbottom='off')
-        ax.yaxis.label.set_size(28)
-        ax.tick_params(axis='both', labelsize=18)
-        ax.locator_params(axis='y', nbins=3)
-        ax.plot(chain[:,i])
-    ax = plt.subplot(mcmc.state.Nvars+1,1,mcmc.state.Nvars+1)
-    ax.set_ylabel("$\log(p)$")
-    ax.yaxis.label.set_size(28)
-    ax.tick_params(axis='both', labelsize=18)
-    ax.locator_params(axis='y', nbins=3)
-    ax.plot(chainlogp) 
-    plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
-    plt.close('all')
-
-def inLineSaveResults(name, Niter, mcmc, chain, true_state, obs, Ntrails, size):
-    fig = plt.figure(figsize=(size[0],size[1]))
-    ax = plt.subplot(111)
-    averageRandomChain = np.zeros(mcmc.state.Nvars)
-    for c in np.random.randint(Niter/4.,Niter,size=Ntrails):
-        s = mcmc.state.deepcopy()
-        s.set_params(chain[c])
-        averageRandomChain += chain[c]
-        ax.plot(*s.get_rv_plotting(obs), alpha=0.14, color="darkolivegreen")
-    averageRandomState = mcmc.state.deepcopy()
-    averageRandomState.set_params(averageRandomChain/Ntrails)
-    ax.plot(*true_state.get_rv_plotting(obs), color="blue")
-    plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
-    ax.set_xticklabels([])
-    plt.grid()
-    ax2=fig.add_axes([0.125, -0.63, 0.775, 0.7]) 
-    ax.set_ylabel("Initial RV")
-    ax2.set_ylabel("Average Result RV")
-    ax.yaxis.label.set_size(28)
-    ax2.yaxis.label.set_size(28)
-    ax.tick_params(axis='both', labelsize=18)
-    ax2.tick_params(axis='both', labelsize=18)
-    plt.plot(*averageRandomState.get_rv_plotting(obs), alpha=0.8,color="black")
-    print "Resulting average params state (randomly sampledriver.ind):"
-    print averageRandomState.get_keys()
-    print averageRandomState.get_params()
-    plt.errorbar(obs.t, obs.rv, yerr=obs.err, fmt='.r')
-    ax2.set_xticklabels([])
-    plt.grid()
-    ax3=fig.add_axes([0.125, -0.9, 0.775, 0.23])  
-    ax3.tick_params(axis='both', labelsize=18)  
-    ax3.yaxis.label.set_size(28)
-    ax3.set_ylabel("Residual RV")    
-    plt.errorbar(obs.t, averageRandomState.get_rv(obs.t)-obs.rv, yerr=obs.err, fmt='.r')
-    plt.grid()
-    plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
-    plt.close('all')
-    return s
-
-#disable this function for now since installing corners on scinet is annoying, this is the fastest way to not do this.
-def inLineSaveCorners(name, chain, somestate, true_state):
-    #figure = corner.corner(chain, labels=somestate.get_keys(), plot_contours=False, truths=true_state.get_params(),label_kwargs={"fontsize":33},max_n_ticks=4)
-    #plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
-    #plt.close('all')
-    pass
-
-def inLineSaveAcTimes(name, chain, size, somestate):
-    actimes = np.zeros(somestate.Nvars)
-    fig = plt.figure(figsize=(size[0],size[1]))
-    for i in range(somestate.Nvars):
-        fig.suptitle('Autocorelation', fontsize=12)
-        ax = plt.subplot(somestate.Nvars+1,1,1+i)
-        ax.set_ylabel(somestate.get_keys()[i])
-        r = AutoCorrelation(chain[:,i])
-        ax.plot(r)
-        ax.yaxis.label.set_size(28)
-        ax.tick_params(axis='both', labelsize=13)
-        ax.locator_params(axis='y', nbins=3)
-        for j in range(len(r)):
-            if(r[j] <0.5):
-                print "AC time {t}".format(t=j)
-                actimes[i] = j
-                break
-    plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
-    plt.close('all')
-    return actimes
-
-def inLineSaveEmceeAcTimes(name, chain, Niter, Nwalkers, size, somestate):
-    actimes = np.zeros(somestate.Nvars)
-    fig = plt.figure(figsize=(size[0],size[1]))
-    fig.suptitle('Autocorelation', fontsize=12)
-    for i in range(somestate.Nvars):
-        ax = plt.subplot(somestate.Nvars+1,1,1+i)
-        ax.set_ylabel(somestate.get_keys()[i])
-        ax.yaxis.label.set_size(28)
-        ax.tick_params(axis='both', labelsize=13)
-        ax.locator_params(axis='y', nbins=3)
-        temp = np.zeros(Niter/Nwalkers)
-        x = 0
-        for k in range(Nwalkers):
-            for p in range(Niter/Nwalkers):
-                temp[p] = chain[(Niter/Nwalkers)*k+p,i]
-            y = AutoCorrelation(temp)
-            ax.plot(y, alpha=0.18, color="darkolivegreen")
-            for j in range(len(y)):
-                if(y[j] <0.5):
-                    actimes[i] += j
-                    break
-        actimes[i] /= Nwalkers
-        print "AC time {t}".format(t=actimes[i])
-    plt.savefig('mcmcplots/{n}.png'.format(n=name), bbox_inches='tight')
-    plt.close('all')
-    return actimes
