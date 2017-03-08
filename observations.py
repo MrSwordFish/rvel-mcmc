@@ -29,12 +29,12 @@ class FakeObservation(Observation):
             sim.add(primary=sim.particles[0],**planet)
         sim.move_to_com()
         
-        self.tf = np.append([0],np.sort(np.random.uniform(0.,tmax/2.,self.Npoints/2.)))
-        self.tb = np.sort(np.random.uniform(0.,-tmax/2.,self.Npoints/2.))
-        self.rvf = np.zeros(self.Npoints/2. + 1)
-        self.rvb = np.zeros(self.Npoints/2.)
-        self.errorf = np.zeros(self.Npoints/2. + 1)
-        self.errorb = np.zeros(self.Npoints/2.)
+        self.tf = np.append([0],np.sort(np.random.uniform(0.,tmax/2.,int(self.Npoints/2.))))
+        self.tb = np.sort(np.random.uniform(0.,-tmax/2.,int(self.Npoints/2.)))
+        self.rvf = np.zeros(int(self.Npoints/2.) + 1)
+        self.rvb = np.zeros(int(self.Npoints/2.))
+        self.errorf = np.zeros(int(self.Npoints/2.) + 1)
+        self.errorb = np.zeros(int(self.Npoints/2.))
         for i, tf in enumerate(self.tf):
             sim.integrate(tf)
             self.errorf[i] = error + np.random.normal(0.,self.errorVar)

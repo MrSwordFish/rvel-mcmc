@@ -101,13 +101,13 @@ class State(object):
     Returns the simple logp of the state.
     '''
     def get_logp(self, obs):
-        if self.logp is None:
-            self.logp = -self.get_chi2(obs)
         if (self.priorHard()):
             lnpri = -np.inf
-        else:
-            lnpri = 0.0
-        return self.logp + lnpri
+            return lnpri
+        softlnpri = 0.0
+        if self.logp is None:
+            self.logp = -self.get_chi2(obs)
+        return self.logp + softlnpri
     
     '''
     This is the lnprior function used with the emcee package and can be passed as an argument. May be moved to MCMC class in later updates.
@@ -233,7 +233,7 @@ class State(object):
         for vindex in range(self.Nvars):
             pindex, vname = self.var_pindex_vname(vindex)
             v = sim.add_variation(order=1)
-            v.vary_pal(pindex,vname)
+            v.vary(pindex,vname)
             variations1.append(v)
         for vindex1 in range(self.Nvars):
             for vindex2 in range(self.Nvars):
@@ -242,7 +242,7 @@ class State(object):
                     pindex2, vname2 = self.var_pindex_vname(vindex2)
                     v = sim.add_variation(order=2, first_order=variations1[vindex1], first_order_2=variations1[vindex2])
                     if pindex1 == pindex2:
-                        v.vary_pal(pindex1,vname1,vname2)
+                        v.vary(pindex1,vname1,vname2)
                     variations2.append(v)
         sim.move_to_com()
         return sim, variations1, variations2
@@ -312,5 +312,4 @@ class State(object):
                 if (self.planets[i]["ix"]**2 + self.planets[i]["iy"]**2 >=4.0) :
                     print "Invalid state was proposed (ix & iy)"
                     return True
-            else:
-                return False
+        return False

@@ -2,8 +2,11 @@
 # MOAB/Torque submission script for multiple serial jobs on
 # SciNet GPC
 #
-#PBS -l nodes=1:ppn=8,walltime=48:00:00
+#PBS -l nodes=1:ppn=8,walltime=24:00:00
 #PBS -N serialx8
+
+#Module loading
+module load intel/15.0.2 python/2.7.8 use.own emcee/2.2.1 nano/2.2.4
  
 # DIRECTORY TO RUN - $PBS_O_WORKDIR is directory job was submitted from
 cd $PBS_O_WORKDIR

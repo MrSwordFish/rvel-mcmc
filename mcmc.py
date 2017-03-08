@@ -3,6 +3,8 @@ import emcee
 from scipy import stats
 import rebound
 from datetime import datetime
+import sys
+import traceback
 
 '''
 Parent MCMC class
@@ -25,7 +27,11 @@ class Mcmc(object):
 #create a static lnprob function to pass to the emcee package
 def lnprob(x, e):
     e.state.set_params(x)
-    logp = e.state.get_logp(e.obs)
+    try:
+        logp = e.state.get_logp(e.obs)
+    except:
+        print "Collision! {t}".format(t=datetime.utcnow())
+        return -np.inf
     return logp
 
 '''
@@ -37,6 +43,7 @@ class Ensemble(Mcmc):
         self.set_scales(scales)
         self.nwalkers = nwalkers
         self.states = [self.state.get_params() for i in range(nwalkers)]
+        self.previous_states = [self.state.get_params() for i in range(nwalkers)]
         self.lnprob = None
         self.totalErrorCount = 0
         for i,s in enumerate(self.states):
@@ -45,21 +52,17 @@ class Ensemble(Mcmc):
         self.sampler = emcee.EnsembleSampler(nwalkers,self.state.Nvars, lnprob, args=[self])
 
     '''
-    Constitutes 1 emcee step. Generates a passes to emcee package/catch errors & collisions.
+    Constitutes 1 emcee step.
     '''
     def step(self):
-        while True:
-            try: 
-                self.states, self.lnprob, rstate = self.sampler.run_mcmc(self.states,1,lnprob0=self.lnprob)
-                break
-            except ValueError as err:
-                print "ValueError has occured, investigate later..."
-                print self.states
-                quit()
-            except rebound.Encounter as err:
-                print "Collision! {t} \n".format(t=datetime.utcnow())
-                return False
-        return True
+        self.previous_states = self.states
+        self.states, self.lnprob, rstate = self.sampler.run_mcmc(self.states,1,lnprob0=self.lnprob)
+        for i in range(len(self.states)):
+            for j in range(len(self.states[0])):
+                if(self.previous_states[i][j] != self.states[i][j]):
+                    return True
+        else:
+            return False
 
     '''
     Sets the scales for the initial random distribution of walkers. Mileage may vary.
@@ -114,7 +117,7 @@ class Mh(Mcmc):
                     return True
                 return False
             except rebound.Encounter as err:
-                print "Collision! {t} \n".format(t=datetime.utcnow())
+                print "Collision! {t}".format(t=datetime.utcnow())
                 return False
 
 '''
@@ -125,7 +128,6 @@ class Smala(Mcmc):
         super(Smala,self).__init__(initial_state, obs)
         self.epsilon = eps
         self.alpha = alp
-        self.print_info_every = 0
 
     '''
     Soft absolute metric, makes sure the eigenvalues are positive.
@@ -172,7 +174,7 @@ class Smala(Mcmc):
                 q_t_ts = self.transitionProbability(stateStar, self.state)
                 break
             except rebound.Encounter as err:
-                print "Collision! {t} \n".format(t=datetime.utcnow())
+                print "Collision! {t}".format(t=datetime.utcnow())
                 return False
             except np.linalg.linalg.LinAlgError as err:
                 print "np.linalg.linalg.LinAlgErrorhas occured, investigate later..."
@@ -183,3 +185,51 @@ class Smala(Mcmc):
             self.state = stateStar
             return True
         return False
+
+
+
+class Alsmala(Smala):
+    def __init__(self, initial_state, obs, eps, alp):
+        super(Alsmala,self).__init__(initial_state, obs, eps, alp)
+
+    def generate_proposal_mala(self):
+        logp, logp_d, logp_dd = self.state.get_logp(self.obs), self.state.logp_d, self.state.logp_dd
+        Ginv = np.linalg.inv(self.softabs(logp_dd))
+        Ginvsqrt = np.linalg.cholesky(Ginv)   
+
+        mu = self.state.get_params() + (self.epsilon)**2 * np.dot(Ginv, logp_d)/2.
+        newparams = mu + self.epsilon * np.dot(Ginvsqrt, np.random.normal(0.,1.,self.state.Nvars))
+        prop = self.state.deepcopy()
+        prop.set_params(newparams)
+        prop.logp_d = logp_d
+        prop.logp_dd = logp_dd
+        return prop
+
+    def transitionProbability_mala(self,state_from, state_to):
+        logp, logp_d, logp_dd = state_from.get_logp(self.obs), state_from.logp_d, state_from.logp_dd 
+        Ginv = np.linalg.inv(self.softabs(logp_dd))
+        mu = state_from.get_params() + (self.epsilon)**2 * np.dot(Ginv, logp_d)/2.
+        return stats.multivariate_normal.logpdf(state_to.get_params(),mean=mu, cov=(self.epsilon)**2*Ginv)
+
+    def step_mala(self):
+        while True:
+            try: 
+                stateStar = self.generate_proposal_mala()
+                if (stateStar.priorHard()):
+                    return False
+                q_ts_t = self.transitionProbability_mala(self.state, stateStar)
+                q_t_ts = self.transitionProbability_mala(stateStar, self.state)
+                break
+            except rebound.Encounter as err:
+                print "Collision! {t}".format(t=datetime.utcnow())
+                return False
+            except np.linalg.linalg.LinAlgError as err:
+                print "np.linalg.linalg.LinAlgErrorhas occured, investigate later..."
+                print stateStar.get_params()
+                print self.state.get_params()
+                quit()
+        if np.exp(stateStar.logp-self.state.logp+q_t_ts-q_ts_t) > np.random.uniform():
+            self.state = stateStar
+            return True
+        return False
+
